@@ -1,0 +1,7 @@
+# ⚠️ PLACEHOLDER — Real data must be downloaded before running the notebook.
+#
+# This file should be replaced with the actual Ebola outbreak CSV.
+# See data/README.md for exact download links and formatting instructions.
+#
+# Expected columns after processing:
+#   day, date, daily_cases, daily_cases_7day_avg, cumulative_cases, daily_deaths, cumulative_deaths, split
