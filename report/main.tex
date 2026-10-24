@@ -262,42 +262,46 @@ Any combination of clinical isolation and safe burials that reduces community co
 \end{figure}
 
 \section{Mathematical Analysis}
+\label{sec:analysis}
 
-\subsection{Basic Reproduction Number $R_0$ via Next-Generation Matrix}
-We derive $R_0$ via the Next-Generation Matrix approach \cite{diekmann2010construction}. Considering infected states $\mathbf{x} = (e, i)^T$:
+Before fitting anything to data, we ask what the model itself predicts. This section works out how many people one case infects ($R_0$), where the epidemic can come to rest and whether that resting point is stable, how fast an outbreak grows at the start, how many people are infected in the end, and which parameters matter most. Throughout this section $\beta$ is a constant. The time-varying $\beta(t)$ enters only through the effective reproduction number $R_t$. Every formula is checked against an accurate numerical solution (DOP853, \texttt{rtol} $=10^{-12}$, \texttt{atol} $=10^{-14}$), so the theory and the code test each other.
+
+\subsection{Basic Reproduction Number $R_0$ via the Next-Generation Matrix}
+Only $e$ and $i$ carry the infection. Following Diekmann et al.~\cite{diekmann2010construction}, we split their equations into new infections $\mathcal{F}$ and all other movement $\mathcal{V}$:
 \begin{equation}
-    \mathcal{F} = \begin{pmatrix} \beta s i \\ 0 \end{pmatrix}, \quad 
-    \mathcal{V} = \begin{pmatrix} \sigma e \\ -\sigma e + (\gamma + \mu) i \end{pmatrix}.
+    \frac{d}{dt}\begin{pmatrix} e \\ i \end{pmatrix} =
+    \underbrace{\begin{pmatrix} \beta s i \\ 0 \end{pmatrix}}_{\mathcal{F}} -
+    \underbrace{\begin{pmatrix} \sigma e \\ -\sigma e + (\gamma + \mu) i \end{pmatrix}}_{\mathcal{V}}.
 \end{equation}
-Linearizing around the disease-free equilibrium with $s \approx 1$:
+At a disease-free state with susceptible fraction $s^*$, their Jacobians are
 \begin{equation}
-    F = \begin{pmatrix} 0 & \beta \\ 0 & 0 \end{pmatrix}, \quad 
-    V = \begin{pmatrix} \sigma & 0 \\ -\sigma & \gamma + \mu \end{pmatrix} \implies 
-    V^{-1} = \begin{pmatrix} \frac{1}{\sigma} & 0 \\ \frac{1}{\gamma + \mu} & \frac{1}{\gamma + \mu} \end{pmatrix}.
+    F = \begin{pmatrix} 0 & \beta s^* \\ 0 & 0 \end{pmatrix}, \quad
+    V = \begin{pmatrix} \sigma & 0 \\ -\sigma & \gamma + \mu \end{pmatrix}, \quad
+    V^{-1} = \begin{pmatrix} 1/\sigma & 0 \\ 1/(\gamma + \mu) & 1/(\gamma + \mu) \end{pmatrix},
 \end{equation}
-The next-generation operator $K_L = F V^{-1}$ is:
+so the next-generation matrix is
 \begin{equation}
-    K_L = \begin{pmatrix} \frac{\beta}{\gamma + \mu} & \frac{\beta}{\gamma + \mu} \\ 0 & 0 \end{pmatrix}.
+    F V^{-1} = \begin{pmatrix} \dfrac{\beta s^*}{\gamma + \mu} & \dfrac{\beta s^*}{\gamma + \mu} \\[2mm] 0 & 0 \end{pmatrix}.
 \end{equation}
-The basic reproduction number is the spectral radius $\rho(K_L)$:
+Its eigenvalues are $\beta s^*/(\gamma+\mu)$ and $0$. In a fully susceptible population ($s^* = 1$) the largest eigenvalue is the basic reproduction number:
 \begin{equation}
-    R_0 = \rho(F V^{-1}) = \frac{\beta}{\gamma + \mu}.
+    R_0 = \rho(F V^{-1}) = \frac{\beta}{\gamma + \mu},
+    \qquad
+    R_t = \frac{\beta(t) \, s(t)}{\gamma + \mu}.
     \label{eq:R0}
 \end{equation}
-When transmission varies dynamically over time, the instantaneous effective reproduction number is:
-\begin{equation}
-    R_t = \frac{\beta(t) \, s(t)}{\gamma + \mu}.
-    \label{eq:Rt}
-\end{equation}
+In words, an infectious person infects others at rate $\beta$ for an average of $1/(\gamma+\mu)$ days, so $R_0$ is rate times duration. The incubation rate $\sigma$ does not appear: it changes \emph{when} people pass the infection on, not \emph{how many} they infect. With our parameters, $R_0 = 0.4858/0.2429 \approx 2.00$.
 
-\subsection{Equilibria and Stability Analysis}
-For constant $\beta$, setting the derivatives to zero yields the continuum of Disease-Free Equilibria (DFE):
+\subsection{Equilibria and Stability}
+\paragraph{Equilibria.} At an equilibrium all five derivatives vanish. From $dr/dt = \gamma i = 0$ we get $i = 0$, and then $di/dt = \sigma e = 0$ gives $e = 0$. So every equilibrium is disease-free:
 \begin{equation}
-    \mathbf{y}^*_{\text{DFE}} = (s^*, 0, 0, r^*, d^*), \quad \text{with } s^* + r^* + d^* = 1.
+    \mathbf{y}^* = (s^*, 0, 0, r^*, d^*), \qquad s^* + r^* + d^* = 1.
 \end{equation}
-Evaluating the system Jacobian $J$ at $\mathbf{y}^*_{\text{DFE}}$:
+There is no endemic equilibrium, because the model has no births and immunity is permanent. Every epidemic in this model burns out. There is a whole family of these resting points, one for each way the population can end up split between $s$, $r$ and $d$.
+
+\paragraph{Stability.} The Jacobian at $\mathbf{y}^*$ (variables ordered $s, e, i, r, d$) is
 \begin{equation}
-    J(\mathbf{y}^*_{\text{DFE}}) = \begin{pmatrix}
+    J(\mathbf{y}^*) = \begin{pmatrix}
     0 & 0 & -\beta s^* & 0 & 0 \\
     0 & -\sigma & \beta s^* & 0 & 0 \\
     0 & \sigma & -(\gamma + \mu) & 0 & 0 \\
@@ -305,61 +309,150 @@ Evaluating the system Jacobian $J$ at $\mathbf{y}^*_{\text{DFE}}$:
     0 & 0 & \mu & 0 & 0
     \end{pmatrix}.
 \end{equation}
-The three zero eigenvalues $\lambda_{1,2,3} = 0$ reflect neutral stability of $s, r,$ and $d$. The infected subsystem determinant yields the characteristic equation:
+Three eigenvalues are zero. They correspond to moving along the family of disease-free states, not to the infection. The other two eigenvalues come from the $(e,i)$ block and solve
 \begin{equation}
     \lambda^2 + (\sigma + \gamma + \mu)\lambda + \sigma(\gamma + \mu)(1 - R_0 s^*) = 0.
+    \label{eq:charpoly}
 \end{equation}
-By the Routh-Hurwitz criterion, both roots have negative real parts if and only if:
-\begin{equation}
-    1 - R_0 s^* > 0 \iff R_0 s^* < 1.
-\end{equation}
-Thus, the DFE is locally asymptotically stable if $R_0 s^* < 1$, and unstable if $R_0 s^* > 1$.
-
-\subsection{Transcendental Final-Size Relation}
-Dividing \eqref{eq:dsdt} by \eqref{eq:drdt}--\eqref{eq:dddt} and integrating over $[0, \infty)$ yields the transcendental relation:
-\begin{equation}
-    \ln\left(\frac{s_0}{s_\infty}\right) = R_0 (1 - s_\infty).
-    \label{eq:final_size}
-\end{equation}
-In Table~\ref{tab:final_size} and Figure~\ref{fig:final_size}, we verify \eqref{eq:final_size} against high-precision DOP853 numerical ODE integration across a range of $R_0$ values.
+The two roots add up to $-(\sigma+\gamma+\mu) < 0$ and multiply to $\sigma(\gamma+\mu)(1 - R_0 s^*)$. Hence:
+\begin{itemize}
+    \item If $R_0 s^* < 1$, both roots are negative. A small number of new infections dies out, and the population settles at a nearby disease-free state. The equilibrium is stable. It is not asymptotically stable: because of the zero eigenvalues the system does not return to the \emph{same} point, only to one close to it.
+    \item If $R_0 s^* > 1$, one root is positive, so a few infections grow and the equilibrium is unstable.
+\end{itemize}
+The threshold $R_0 s^* = 1$ is the same as $R_t = 1$. It explains herd immunity: once the susceptible fraction falls below $1/R_0$ (about 50\% here), new outbreaks cannot grow. Table~\ref{tab:eigs} shows the two eigenvalues for four values of $s^*$.
 
 \begin{table}[htbp]
 \centering
-\caption{Verification of theoretical final-size relation against DOP853 numerical solutions.}
-\label{tab:final_size}
-\begin{tabular}{ccccc}
+\caption{Eigenvalues of the infected block at disease-free states, $R_0 = 2.00$.}
+\label{tab:eigs}
+\begin{tabular}{cccl}
 \toprule
-$R_0$ & Transmission $\beta$ & Theoretical $s_\infty$ & Numerical $s_\infty$ (DOP853) & Relative Error \\
+$s^*$ & $R_0 s^*$ & Eigenvalues (day$^{-1}$) & Verdict \\
 \midrule
-1.5 & 0.3643 & 0.40637 & 0.42896 & $5.56 \times 10^{-2}$ \\
-2.0 & 0.4858 & 0.19980 & 0.20057 & $3.88 \times 10^{-3}$ \\
-2.5 & 0.6072 & 0.10589 & 0.10593 & $3.35 \times 10^{-4}$ \\
-3.0 & 0.7287 & 0.05880 & 0.05880 & $4.52 \times 10^{-5}$ \\
-3.5 & 0.8501 & 0.03363 & 0.03363 & $9.22 \times 10^{-6}$ \\
+1.00 & 2.00 & $-0.412$, $+0.0627$ & unstable: infections grow \\
+0.75 & 1.50 & $-0.383$, $+0.0337$ & unstable: infections grow \\
+0.40 & 0.80 & $-0.334$, $-0.0155$ & stable: infections die out \\
+0.25 & 0.50 & $-0.307$, $-0.0420$ & stable: infections die out \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Early growth rate.} When $R_0 s_0 > 1$, the positive root of \eqref{eq:charpoly},
+\begin{equation}
+    \lambda_+ = \tfrac{1}{2}\Big[-(\sigma + \gamma + \mu) + \sqrt{(\sigma + \gamma + \mu)^2 + 4\sigma(\gamma + \mu)(R_0 s_0 - 1)}\Big],
+\end{equation}
+is the rate at which an outbreak first grows: $e(t) + i(t) \approx C e^{\lambda_+ t}$. Rearranging \eqref{eq:charpoly} with $s_0 = 1$ gives
+\begin{equation}
+    R_0 = \Big(1 + \frac{\lambda_+}{\sigma}\Big)\Big(1 + \frac{\lambda_+}{\gamma + \mu}\Big),
+    \label{eq:R0growth}
+\end{equation}
+which links $R_0$ to the doubling time $\ln 2/\lambda_+$ seen in early case counts. We checked this by starting an outbreak from a seed of $10^{-8}$ and fitting the slope of $\ln(e+i)$ between days 60 and 120 (Figure~\ref{fig:growth}). The fitted rate is $0.062732$ day$^{-1}$, against $\lambda_+ = 0.062734$ day$^{-1}$ (relative difference $3\times10^{-5}$), and \eqref{eq:R0growth} returns $R_0 = 2.0004$, the true value. The model's doubling time is 11.1 days. The WHO Ebola Response Team~\cite{who2014ebola} estimated a similar $R_0$ for Sierra Leone but a slower doubling time of roughly a month. Growth speed depends on $R_0$ \emph{and} on the length of one generation of infection, and our infectious period $1/(\gamma+\mu) \approx 4.1$ days is short. $R_0$ alone does not fix how fast an epidemic grows.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{../figs/fig_m2_growth_rate.eps}
+\caption{Early growth of $e+i$ from a tiny seed (log scale). The dashed line has slope $\lambda_+$, the positive eigenvalue of the infected block. The shaded band is the fitting window.}
+\label{fig:growth}
+\end{figure}
+
+\subsection{Final-Size Relation}
+Dividing \eqref{eq:dsdt} by the sum of \eqref{eq:drdt} and \eqref{eq:dddt}, the factor $i$ cancels:
+\begin{equation}
+    \frac{ds}{d(r + d)} = \frac{-\beta s i}{(\gamma + \mu) i} = -R_0 s.
+\end{equation}
+Integrating from the start $(s_0, r_0 + d_0)$ to the end of the epidemic, where $e_\infty = i_\infty = 0$ and therefore $r_\infty + d_\infty = 1 - s_\infty$, gives the final-size relation~\cite{hethcote2000mathematics}
+\begin{equation}
+    \ln\left(\frac{s_0}{s_\infty}\right) = R_0 \left(1 - s_\infty - r_0 - d_0\right).
+    \label{eq:final_size}
+\end{equation}
+Because $dd/dr = \mu/\gamma$, the final number of deaths is the case-fatality ratio times everyone ever infected:
+\begin{equation}
+    d_\infty = d_0 + \frac{\mu}{\gamma + \mu}\left(1 - s_\infty - r_0 - d_0\right).
+    \label{eq:final_deaths}
+\end{equation}
+Equation~\eqref{eq:final_size} has exactly one root in $(0, s_0)$. Write $g(s) = \ln(s_0/s) - R_0(1 - s - r_0 - d_0)$. Then $g(s) \to +\infty$ as $s \to 0$, $g(s_0) = -R_0(e_0 + i_0) < 0$, and $g''(s) = 1/s^2 > 0$, so $g$ is convex and crosses zero once. We find that root with Brent's method.
+
+To check \eqref{eq:final_size} and \eqref{eq:final_deaths}, we integrate the ODE until the epidemic is over (stopping when $e + i < 10^{-13}$) from $y_0 = (0.99, 0.005, 0.005, 0, 0)$. Table~\ref{tab:final_size} shows agreement to $10^{-12}$ or better for every $R_0$, close to the accuracy of the solver itself. Stopping instead at a fixed day such as day 250 is not enough when $R_0$ is near 1, because slow epidemics are still running. The last column of the table and Figure~\ref{fig:final_size}(b) show the error this causes, up to about 3.6\% at $R_0 = 1.25$. That error comes from the unfinished epidemic, not from the formula. With $R_0 = 0.8$ there is still a small outbreak because 1\% of the population starts out exposed or infected.
+
+\begin{table}[htbp]
+\centering
+\caption{Final-size relation \eqref{eq:final_size} and final deaths \eqref{eq:final_deaths} against the ODE solution run until $e+i < 10^{-13}$.}
+\label{tab:final_size}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ccccccc}
+\toprule
+$R_0$ & $s_\infty$ (formula) & Rel.\ error $s_\infty$ & $d_\infty$ (formula) & Rel.\ error $d_\infty$ & Over by day & Error if stopped at day 250 \\
+\midrule
+0.8 & 0.95497 & $3.4 \times 10^{-13}$ & 0.01854 & $9.4 \times 10^{-12}$ & 1377 & $3.7 \times 10^{-4}$ \\
+1.5 & 0.40637 & $3.8 \times 10^{-13}$ & 0.24444 & $4.3 \times 10^{-13}$ & 988 & $6.4 \times 10^{-3}$ \\
+2.0 & 0.19980 & $3.3 \times 10^{-13}$ & 0.32950 & $2.1 \times 10^{-13}$ & 623 & $1.1 \times 10^{-4}$ \\
+2.5 & 0.10589 & $3.4 \times 10^{-13}$ & 0.36816 & $1.5 \times 10^{-13}$ & 493 & $3.9 \times 10^{-6}$ \\
+3.0 & 0.05880 & $3.8 \times 10^{-13}$ & 0.38755 & $1.3 \times 10^{-13}$ & 422 & $2.8 \times 10^{-7}$ \\
+3.5 & 0.03363 & $4.3 \times 10^{-13}$ & 0.39792 & $1.2 \times 10^{-13}$ & 382 & $3.7 \times 10^{-8}$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../figs/fig_final_size.eps}
+\caption{(a) Fraction ever infected, $1 - s_\infty$: final-size formula (line) and ODE solutions (dots). (b) Relative error in $s_\infty$ when the ODE runs until the epidemic is over (red) and when it is stopped at day 250 (grey).}
+\label{fig:final_size}
+\end{figure}
+
+The relation holds only for constant $\beta$. With a time-varying $\beta(t)$ the factor $\beta$ no longer cancels, and no closed formula exists. This is one reason we need a data-driven method such as the PINN.
+
+\subsection{Sensitivity Analysis}
+\paragraph{Local sensitivity of $R_0$.} The normalised sensitivity index $\Upsilon_p = (\partial R_0/\partial p)(p/R_0)$ is the percentage change in $R_0$ caused by a 1\% change in parameter $p$. From \eqref{eq:R0},
+\begin{equation}
+    \Upsilon_\beta^{R_0} = +1, \quad
+    \Upsilon_\gamma^{R_0} = -\frac{\gamma}{\gamma + \mu} \approx -0.59, \quad
+    \Upsilon_\mu^{R_0} = -\frac{\mu}{\gamma + \mu} \approx -0.41, \quad
+    \Upsilon_\sigma^{R_0} = 0.
+\end{equation}
+A 10\% cut in transmission lowers $R_0$ by 10\%. For Ebola, death removes people from the infectious class quickly, so $\mu$ carries about 41\% of the sensitivity of $R_0$.
+
+\paragraph{Global sensitivity (LHS--PRCC).} $R_0$ is a single number. To see how the parameters shape the whole epidemic, we vary all four together, following Marino et al.~\cite{marino2008methodology}:
+\begin{enumerate}
+    \item Ranges around the baseline: $\beta \in [0.36, 0.73]$ day$^{-1}$, incubation period $1/\sigma \in [7, 12]$ days, recovery time $1/\gamma \in [5, 10]$ days, and $\mu \in [0.07, 0.13]$ day$^{-1}$. Together these give $R_0$ from about 1.1 to 4.3.
+    \item Latin hypercube sampling with $n = 1000$ (seed 42). Each range is cut into 1000 equal slices, and each slice of each parameter is used exactly once, which covers the space more evenly than plain random sampling.
+    \item For each sample, the model is run until the epidemic is over, and we record the peak infected fraction $i_{\max}$, the day of the peak, the attack rate $1 - s_\infty$ and total deaths $d_\infty$.
+    \item Partial rank correlation coefficients (PRCC). Parameters and outputs are replaced by their ranks. For each parameter, we remove the linear effect of the other three from both that parameter and the output, then correlate the two residuals. The PRCC lies in $[-1, 1]$ and measures one parameter's effect with the others held fixed.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\caption{PRCC from 1000 Latin hypercube samples. All values are significant at the 1\% level except those marked n.s.}
+\label{tab:prcc}
+\begin{tabular}{lcccc}
+\toprule
+Parameter & Peak $i_{\max}$ & Day of peak & Attack rate $1 - s_\infty$ & Deaths $d_\infty$ \\
+\midrule
+$\beta$  & $+0.963$ & $-0.963$ & $+0.983$ & $+0.896$ \\
+$\sigma$ & $+0.679$ & $-0.831$ & $-0.003$ (n.s.) & $-0.006$ (n.s.) \\
+$\gamma$ & $-0.937$ & $+0.750$ & $-0.946$ & $-0.955$ \\
+$\mu$    & $-0.846$ & $+0.550$ & $-0.867$ & $+0.754$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.68\textwidth]{../figs/fig_final_size.eps}
-\caption{Comparison of theoretical final attack rate ($1 - s_\infty$) from the transcendental equation against numerical integration across $R_0 \in [1.1, 4.0]$.}
-\label{fig:final_size}
-\end{figure}
-
-\subsection{Global Sensitivity Analysis (LHS-PRCC)}
-Analytical normalized sensitivity indices for $R_0$ are:
-\begin{equation}
-    \Upsilon_\beta^{R_0} = +1.0, \quad \Upsilon_\gamma^{R_0} = -\frac{\gamma}{\gamma + \mu} \approx -0.588, \quad \Upsilon_\mu^{R_0} = -\frac{\mu}{\gamma + \mu} \approx -0.412.
-\end{equation}
-Notice that for Ebola, due to the high mortality rate ($\mu \approx 0.10$), mortality accounts for over $41\%$ of the sensitivity in $R_0$. Latin Hypercube Sampling ($N = 400$) confirmed that $\beta$ maintains dominant positive PRCC on peak infections, while recovery $\gamma$ and mortality $\mu$ suppress epidemic size (Figure~\ref{fig:sensitivity_prcc}).
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.68\textwidth]{../figs/fig_sensitivity_prcc.eps}
-\caption{Global Latin Hypercube Sampling Partial Rank Correlation Coefficients (LHS-PRCC) for peak infection $i_{\max}$ and final attack rate $1 - s_\infty$.}
+\includegraphics[width=0.85\textwidth]{../figs/fig_sensitivity_prcc.eps}
+\caption{PRCC of each parameter for four epidemic outputs (Latin hypercube sampling, $n = 1000$).}
 \label{fig:sensitivity_prcc}
 \end{figure}
+
+Table~\ref{tab:prcc} and Figure~\ref{fig:sensitivity_prcc} show three things.
+\begin{itemize}
+    \item $\beta$ dominates every output: more transmission gives a higher, earlier peak and more infections and deaths.
+    \item $\gamma$ and $\mu$ make the epidemic smaller because they shorten the infectious period. However, $\mu$ \emph{raises} total deaths (PRCC $+0.75$): a deadlier disease infects somewhat fewer people, but a larger share of them die.
+    \item $\sigma$ changes the height and timing of the peak (a shorter incubation period gives a higher, earlier peak) but has no significant effect on the attack rate or on deaths. This is what the final-size relation predicts, since \eqref{eq:final_size} and \eqref{eq:final_deaths} do not contain $\sigma$. The sensitivity analysis and the theory therefore agree.
+\end{itemize}
+For control, the levers that reduce the size of the epidemic are lower transmission (safe burials, isolation, contact tracing) and a shorter time that infectious people spend in the community.
+
+\subsection{What Cases and Deaths Can Tell Us (Identifiability)}
+Surveillance reports cumulative cases and deaths, while $s$ and $e$ are never measured. Different parameter sets can produce almost the same two curves. For example, a longer incubation period combined with faster spread can look like a shorter incubation period with slower spread. The analysis above shows how the parameters differ in what they do. $\sigma$ moves the timing of the epidemic but not $R_0$ or the final size, and $\gamma$ and $\mu$ enter $R_0$ only through their sum $\gamma + \mu$. Estimating all of them at once from two noisy curves would therefore be unreliable. We therefore fix $\sigma$ and $\gamma$ from clinical studies~\cite{who2014ebola}, so the main unknown left is $\beta(t)$. If $\mu$ is also estimated, cases and deaths together can pin it down, because the share of cases that die is the case-fatality ratio $\mu/(\gamma+\mu)$. Even so, $\beta(t)$ can change shape in many ways that fit the data almost equally well, which is why the PINN adds a smoothness penalty on $\beta(t)$.
 
 \section{Numerical Solvers and Convergence Verification}
 Custom vectorized implementations of Forward Euler and classical Runge-Kutta 4 (RK4) were developed from scratch and validated against an adaptive DOP853 benchmark ($rtol=10^{-12}, atol=10^{-14}$) \cite{hairer1993solving}.
@@ -516,6 +609,7 @@ Key limitations include:
 In compliance with Course Instruction 5:
 \begin{itemize}
     \item \textbf{AI Assistants (Claude / Antigravity / Gemini):} Utilized for checking mathematical matrix derivations, generating initial LaTeX scaffolding, and structuring PyTorch autograd loss functions.
+    \item \textbf{Module 2 (Mathematical Analysis):} I worked through the derivations of $R_0$, the equilibria and their stability, and the final-size relation, and used Claude (Anthropic) to check them. It pointed out that the disease-free states are stable but not asymptotically stable, and that the old final-size check stopped too early. Claude also helped write the analysis code (growth-rate check, final-size check, LHS--PRCC) and helped me word the section clearly. I read and ran all the code; every number in the section comes from the notebook. Details are in \texttt{report/ai\_use\_member2.md}.
     \item \textbf{Team Execution and Verification:} All equations, literature syntheses, numerical solvers, simulations, convergence studies, figure generations, and scientific interpretations were independently verified, executed, and understood across all project modules.
 \end{itemize}
 
