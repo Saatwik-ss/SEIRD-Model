@@ -38,7 +38,7 @@
 \maketitle
 
 \begin{abstract}
-Compartmental epidemic models are foundational for public health planning, yet standard formulations rely on static transmission coefficients ($\beta$) that fail to accommodate behavioral adjustments, non-pharmaceutical interventions, and safe burial practices. Furthermore, surveillance networks capture only manifest clinical outcomes (diagnosed cases and hospital mortalities), leaving the incubating latent class and the depleting susceptible host pool unobserved. In this project, we develop and evaluate a Physics-Informed Neural Network (PINN) framework to reconstruct latent states and discover time-varying transmission functions $\beta(t)$ in an SEIRD dynamical system, using the 2014--2016 West African Ebola Virus Disease (EVD) epidemic in Sierra Leone ($N = 7{,}092{,}113$) as a focal case study. In accordance with course guidelines requiring original analysis upon published models, we first present a rigorous comparative synthesis of three benchmark Ebola models (Legrand et al., Rivers et al., and Althaus), deriving exact phase-plane trajectory relations $i(s)$, the theoretical peak infection threshold $i_{\max}$, and the critical intervention bounds $p_c = 1 - 1/R_0$. We derive the basic reproduction number $R_0 = \beta/(\gamma+\mu) \approx 2.00$ via the next-generation matrix, establish disease-free equilibrium stability ($R_0 s^* < 1$), and verify theoretical final-size equations against high-precision ODE simulations. Vectorized forward Euler and classical Runge-Kutta 4 solvers are implemented from scratch and benchmarked against an adaptive DOP853 integrator ($rtol=10^{-12}, atol=10^{-14}$), demonstrating empirical convergence orders of $0.999$ and $3.694$. Across synthetic verification experiments, our dual-network PINN reconstructs continuous step-like and sinusoidal transmission trajectories under observational noise and accurately recovers hidden unobserved susceptible and exposed compartments (RMSE $\le 8.8 \times 10^{-3}$). Finally, we evaluate the PINN on a 120-day epidemiological surveillance dataset from Sierra Leone, applying a strict 75\%/25\% chronological train/test partition. Benchmarking against constant-$\beta$ and piecewise-constant classical least-squares baselines, we provide an honest scientific assessment of out-of-sample forward extrapolation, identifying both the retrospective inverse discovery strengths of PINNs and their forward forecasting limits.
+Compartmental epidemic models are foundational for public health planning, yet standard formulations rely on static transmission coefficients ($\beta$) that fail to accommodate behavioral adjustments, non-pharmaceutical interventions, and safe burial practices. Furthermore, surveillance networks capture only manifest clinical outcomes (diagnosed cases and hospital mortalities), leaving the incubating latent class and the depleting susceptible host pool unobserved. In this project, we develop and evaluate a Physics-Informed Neural Network (PINN) framework to reconstruct latent states and discover time-varying transmission functions $\beta(t)$ in an SEIRD dynamical system, using the 2014--2016 West African Ebola Virus Disease (EVD) epidemic in Sierra Leone ($N = 7{,}092{,}113$) as a focal case study. In accordance with course guidelines requiring original analysis upon published models, we first present a rigorous comparative synthesis of three benchmark Ebola models (Legrand et al., Rivers et al., and Althaus), deriving exact phase-plane trajectory relations $i(s)$, the theoretical peak infection threshold $i_{\max}$, and the critical intervention bounds $p_c = 1 - 1/R_0$. We derive the basic reproduction number $R_0 = \beta/(\gamma+\mu) \approx 2.00$ via the next-generation matrix, establish disease-free equilibrium stability ($R_0 s^* < 1$), and verify theoretical final-size equations against high-precision ODE simulations. Vectorized forward Euler and classical Runge-Kutta 4 solvers are implemented from scratch and benchmarked against an adaptive DOP853 integrator ($rtol=10^{-12}, atol=10^{-14}$), demonstrating empirical convergence orders of $0.999$ and $3.694$. Our PINN solves the forward problem to a relative error below $1.5\times 10^{-3}$, and from noisy cumulative cases and deaths alone it recovers a step change in $\beta(t)$ to 11--12\%, the death rate $\mu$ to 4--6\%, the hidden susceptible fraction to 0.5\% and the exposed and infectious compartments to 7\%; an ablation shows which design choices make this work. On a 120-day surveillance dataset from Sierra Leone with a strict 75\%/25\% chronological split, and on 8 rolling 4-week forecasts over the whole 2014--15 epidemic using WHO data, the PINN forecasts cases at least as accurately as constant-$\beta$ and piecewise-$\beta$ least squares (held-out case error 9.4\% against 9.8\%; rolling mean absolute error 101 against 108 cases), but forecasts deaths less accurately.
 \end{abstract}
 
 \section{Introduction and Biological Motivation}
@@ -475,62 +475,104 @@ Step sizes $h \in \{1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125\}$ days were tested o
 \end{figure}
 
 \section{Physics-Informed Neural Network (PINN) Methodology}
+\label{sec:pinn}
 
-\subsection{Dual-Network Architecture}
-The framework deploys two parallel neural networks:
-\begin{enumerate}
-    \item \textbf{State Network $\mathcal{NN}_\theta(\tau)$:} 3 hidden layers (48 neurons each, $\tanh$ activation) mapping rescaled time $\tau = t/T \in [0, 1]$ to predicted states $\hat{\mathbf{u}}(\tau) = (\hat{s}, \hat{e}, \hat{i}, \hat{r}, \hat{d}) \in (0, 1)^5$.
-    \item \textbf{Transmission Network $\mathcal{NN}_\phi(\tau)$:} 2 hidden layers (32 neurons each, $\tanh$ activation) outputting $\hat{\beta}(\tau)$ with $\text{Softplus}$ activation to enforce positivity $\hat{\beta} > 0$.
-\end{enumerate}
+\subsection{What the PINN has to do}
+Surveillance gives two numbers at irregular report dates: cumulative cases and cumulative deaths. The PINN has to turn these into everything else: the transmission rate $\beta(t)$, the death rate $\mu$, the starting values, and the compartments nobody measures ($S$, $E$, $I$, $R$). It does this by training neural networks that must both pass close to the reports and satisfy the SEIRD equations at every time point \cite{raissi2019physics,cuomo2022scientific}. The code is in \texttt{seird\_pinn.py}; the experiments are in \texttt{pinn\_experiments.py}.
 
-\subsection{Loss Functional and Smoothness Regularization}
-The total composite objective functional is:
-\begin{equation}
-    \mathcal{L}(\theta, \phi) = w_{\text{data}} \mathcal{L}_{\text{data}} + w_{\text{ode}} \mathcal{L}_{\text{ode}} + w_{\text{ic}} \mathcal{L}_{\text{ic}} + w_{\text{reg}} \mathcal{L}_{\text{smooth}},
-\end{equation}
-where:
+\subsection{The model in observable form}
+Let $C(t) = I + R + D$ be the cumulative number of people who have become symptomatic, which is what case counts report. Because $dC/dt = \sigma E$, the SEIRD system \eqref{eq:dsdt}--\eqref{eq:dddt} can be written with $C$ in place of $R$:
 \begin{align}
-    \mathcal{L}_{\text{data}} &= \frac{1}{K} \sum_{k=1}^K \|\hat{\mathbf{y}}(\tau_k) - \mathbf{y}_k^{\text{obs}}\|^2, \\
-    \mathcal{L}_{\text{ode}} &= \frac{1}{N_f} \sum_{j=1}^{N_f} \left\| \frac{d\hat{\mathbf{u}}}{d\tau} - T \mathbf{f}(\hat{\mathbf{u}}, \hat{\beta}) \right\|^2 \quad \text{at collocation points } \tau_j \sim \mathcal{U}(0, 1), \\
-    \mathcal{L}_{\text{ic}} &= \|\hat{\mathbf{u}}(0) - \mathbf{u}_0\|^2, \\
-    \mathcal{L}_{\text{smooth}} &= \frac{1}{N_f} \sum_{j=1}^{N_f} \left( \frac{d\hat{\beta}}{d\tau}(\tau_j) \right)^2.
+    \frac{dE}{dt} &= \beta(t)\,\frac{S}{N}\,I - \sigma E, &
+    \frac{dI}{dt} &= \sigma E - (\gamma+\mu) I, \\
+    \frac{dC}{dt} &= \sigma E, &
+    \frac{dD}{dt} &= \mu I,
 \end{align}
-The gradient $\frac{d\hat{\beta}}{d\tau}$ penalizes unphysical oscillations, regularizing the ill-posed inverse problem.
+with $R = C - I - D$ and $S = N - E - C$. Two consequences follow. First, $S + E + I + R + D = N$ holds exactly for any network output, so the conservation law \eqref{eq:conservation} never has to be learned. Second, both observed series are states of the network, so the data term compares like with like.
+
+Time is rescaled to $\tau = (t - t_0)/T \in [0,1]$ and every state is measured in units of a characteristic count $K$ (the largest reported case count in the training window; $K = 1$ for the synthetic population fractions). The equations become $dx/d\tau = T f(x)$ with all quantities of order one.
+
+\subsection{Networks and parameters}
+\begin{itemize}
+    \item \textbf{State network} $g_\theta(\tau)$: 3 hidden layers of 48 $\tanh$ units and 4 outputs. The states are
+    \begin{equation}
+        e = e_0\, e^{\tau g_1}, \quad i = i_0\, e^{\tau g_2}, \quad c = c_0\, e^{\tau g_3}, \quad d = d_0 + \tau g_4 .
+    \end{equation}
+    The factor $\tau$ makes the initial condition hold exactly; the exponentials keep $e$, $i$, $c$ positive while they grow by orders of magnitude.
+    \item \textbf{Transmission network} $h_\phi(\tau)$: 3 hidden layers of 32 $\tanh$ units, $\beta(\tau) = \mathrm{Softplus}(h_\phi(\tau) + b) > 0$.
+    \item \textbf{Fourier features}: both networks receive $\tau' = 2\tau - 1$ together with $\sin(\pi k \tau')$ and $\cos(\pi k \tau')$, $k = 1, \dots, 4$. Plain $\tanh$ networks learn slowly varying functions first (``spectral bias'' \cite{rahaman2019spectral}); these inputs make changes within the window as easy to represent as trends \cite{tancik2020fourier}.
+    \item \textbf{Death rate}: $\mu = \gamma\,\mathrm{CFR}/(1 - \mathrm{CFR})$ with the case-fatality ratio $\mathrm{CFR} \in (0.2, 0.8)$ (published Ebola values are 40--70\%). The bound removes a spurious solution in which $\mu \to 0$ while $I$ grows without limit so that $\mu I$ still matches the deaths.
+    \item \textbf{Initial conditions} $e_0, i_0, c_0, d_0$ are trainable.
+\end{itemize}
+Following the shared conventions, $\sigma = 1/9.4$ and $\gamma = 1/7$ day$^{-1}$ are fixed, and $\beta(t)$, $\mu$ and the initial conditions are estimated; Section~\ref{sec:analysis} explains why estimating $\sigma$ and $\gamma$ as well would be unreliable.
+
+\subsection{Loss function}
+\begin{equation}
+    \mathcal{L} = w_{\text{data}}\left[\mathcal{L}_C + \mathcal{L}_D\right] + w_{\text{ode}}\,\mathcal{L}_{\text{ode}} + w_{\text{smooth}}\,\mathcal{L}_{\text{smooth}},
+\end{equation}
+\begin{align}
+    \mathcal{L}_C &= \frac{1}{n_C}\sum_k \big(c(\tau_k) - C_k/K\big)^2, \qquad
+    \mathcal{L}_D = \frac{1}{n_D}\sum_k \big(d(\tau_k) - D_k/K\big)^2, \\
+    \mathcal{L}_{\text{ode}} &= \frac{1}{N_f}\sum_{j=1}^{N_f}\left[\left(\frac{e' - T f_e}{e}\right)^2 + \left(\frac{i' - T f_i}{i}\right)^2 + \left(\frac{c' - T f_c}{c}\right)^2 + \left(\frac{d' - T f_d}{c}\right)^2\right]_{\tau_j}, \\
+    \mathcal{L}_{\text{smooth}} &= \frac{1}{N_f}\sum_{j=1}^{N_f}\left(\frac{d\beta}{d\tau}(\tau_j)\right)^2 .
+\end{align}
+The sums in $\mathcal{L}_C$ and $\mathcal{L}_D$ run only over real report dates; nothing is interpolated. The derivatives $x' = dx/d\tau$ come from automatic differentiation at $N_f = 200$ collocation points. We use $w_{\text{data}} = w_{\text{ode}} = 1$.
+
+\paragraph{Why each term exists.} $\mathcal{L}_C$ and $\mathcal{L}_D$ tie the solution to the reports. $\mathcal{L}_{\text{ode}}$ forces the states to obey the SEIRD dynamics, which is what lets the hidden compartments be recovered. Each residual is divided by its state, so it measures a \emph{relative} error: an epidemic grows by orders of magnitude, and with plain residuals the early, small phase costs almost nothing (Section~\ref{sec:e6} shows the forward problem fails without this). $\mathcal{L}_{\text{smooth}}$ makes the inverse problem well posed: $\beta(t)$ depends on the second derivative of the case curve, and without a penalty noise in the data would be amplified into swings in $\beta$.
+
+\subsection{Training and forecasting}
+Adam \cite{kingma2015adam} (learning rate $2\times 10^{-3}$ with cosine decay, 2000 iterations, new random collocation points every iteration) brings the networks near a solution; L-BFGS \cite{liu1989limited} with a strong-Wolfe line search (2500--6000 iterations on a fixed grid) then converges it. All computations use double precision, and each experiment is repeated with several random seeds.
+
+To forecast, we take the PINN's states at the end of training, hold $\beta$ at its mean over the last 14 days, keep the learned $\mu$, and integrate the SEIRD equations forward with DOP853. The ensemble forecast is the median over seeds. Holding $\beta$ constant is an assumption: a forecast cannot anticipate a change in transmission that has not yet shown up in the data.
+
+\paragraph{How settings were chosen.} The synthetic settings ($w_{\text{smooth}} = 10^{-4}$, 4 Fourier frequencies, 6000 L-BFGS iterations) were tuned on a separate seed (seed 1), never on the reported seeds 42--46. The real-data settings ($w_{\text{smooth}} = 10^{-3}$, 4 Fourier frequencies, 14-day $\beta$ window) were chosen on validation forecasts made before the first test origin of Section~\ref{sec:e7} and on a fit to days 0--59 of the Module 5 data; no test window was used.
 
 \section{Synthetic Experiments and Hidden-State Inversion}
 
-\subsection{Forward PINN Integration (Experiment E2)}
-With transmission fixed ($\beta = 0.4858$), the PINN closely tracks the DOP853 benchmark across all compartments (Figure~\ref{fig:e2_forward_pinn}).
+\subsection{Forward problem (Experiment E2)}
+With $\beta = 0.4858$ ($R_0 = 2$), $\mu = 0.1$ and $(s,e,i,r,d)(0) = (0.99, 0.005, 0.005, 0, 0)$, and no data at all, the PINN is trained only on $\mathcal{L}_{\text{ode}}$ (Adam 2000 and L-BFGS 4000 iterations). Over 3 seeds its mean relative $L_2$ error against DOP853 is $3.5\times10^{-4}$ ($s$), $5.1\times10^{-4}$ ($e$), $4.9\times10^{-4}$ ($i$), $8.8\times10^{-4}$ ($r$) and $9.4\times10^{-4}$ ($d$); the worst compartment in any seed is $1.5\times10^{-3}$, and $S+E+I+R+D = N$ to $2\times 10^{-16}$ (Figure~\ref{fig:e2_forward_pinn}).
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\textwidth]{../figs/fig_e2_forward_pinn.eps}
-\caption{Forward PINN integration (Experiment E2) comparing learned state trajectories against DOP853 reference solutions.}
+\includegraphics[width=0.95\textwidth]{../figs/fig_e2_forward_pinn.eps}
+\caption{Experiment E2: forward PINN (markers) against DOP853 (lines), and the pointwise error.}
 \label{fig:e2_forward_pinn}
 \end{figure}
 
-\subsection{Inverse Recovery of $\beta(t)$ Under Noise (Experiment E3)}
-We evaluated inverse recovery on two synthetic transmission functions:
-\begin{enumerate}
-    \item \textbf{Step Intervention:} Simulating rapid community quarantine at day 25 ($\beta(t) = 0.60$ for $t < 25$, dropping to $0.22$ for $t \ge 25$).
-    \item \textbf{Sinusoidal Oscillation:} Simulating seasonal variability ($\beta(t) = 0.45 + 0.15 \sin(2\pi t / 30)$).
-\end{enumerate}
-Under $1\%$ and $5\%$ Gaussian noise, the PINN reconstructed both profiles (Figure~\ref{fig:e3_inverse_beta}), achieving an RMSE $< 0.15$ on the step profile and $< 0.09$ on the harmonic wave.
+\subsection{Inverse problem from cases and deaths only (Experiments E3 and E4)}
+We simulate an epidemic in which an intervention on day 30 cuts transmission from $\beta = 0.55$ to $0.25$ ($R_t$ from 2.3 to about 1), over 120 days with $\mu = 0.1$. The PINN sees only daily cumulative cases $C(t)$ and deaths $D(t)$, each with independent multiplicative Gaussian noise of 1\% or 5\%. It must recover $\beta(t)$, $\mu$, all initial conditions, and the hidden $s(t)$, $e(t)$, $i(t)$. Table~\ref{tab:e3e4} reports the mean $\pm$ SD over 5 seeds.
+
+\begin{table}[htbp]
+\centering
+\caption{Experiments E3 and E4: recovery from noisy cumulative cases and deaths only (mean $\pm$ SD over 5 seeds). Errors are relative $L_2$ errors except where stated.}
+\label{tab:e3e4}
+\begin{tabular}{lcc}
+\toprule
+Quantity & 1\% noise & 5\% noise \\
+\midrule
+$\beta(t)$ & $0.108 \pm 0.006$ & $0.120 \pm 0.008$ \\
+$\beta(t)$ RMSE more than 5 days from the jump (day$^{-1}$) & $0.022 \pm 0.004$ & $0.027 \pm 0.004$ \\
+$\mu$ (relative error) & $0.044 \pm 0.003$ & $0.059 \pm 0.013$ \\
+hidden $s(t)$ & $0.0033 \pm 0.0004$ & $0.0047 \pm 0.0011$ \\
+hidden $e(t)$ & $0.055 \pm 0.006$ & $0.066 \pm 0.009$ \\
+hidden $i(t)$ & $0.055 \pm 0.004$ & $0.068 \pm 0.009$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The transmission rate is recovered to about 11--12\% (Figure~\ref{fig:e3_inverse_beta}); most of that error sits at the jump, which a smooth network cannot follow instantly. The death rate is recovered within 4--6\% although it is never observed directly: the ratio of deaths to cases fixes it. The hidden susceptible fraction is recovered within 0.5\% and the exposed and infectious compartments within 7\% (Figure~\ref{fig:e4_hidden_states}). Five times more noise costs only about one percentage point on every quantity, and the seeds agree closely.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{../figs/fig_e3_inverse_beta.eps}
-\caption{Inverse PINN recovery of dynamic transmission rate $\beta(t)$ (Experiment E3) under observational noise.}
+\includegraphics[width=0.62\textwidth]{../figs/fig_e3_inverse_beta.eps}
+\caption{Experiment E3: $\beta(t)$ recovered from noisy cumulative cases and deaths (mean of 5 seeds; band: range over seeds at 5\% noise).}
 \label{fig:e3_inverse_beta}
 \end{figure}
 
-\subsection{Hidden Latent State Recovery (Experiment E4)}
-Surveillance networks record only cumulative diagnoses $C(t) = 1 - s(t) - e(t)$ and deaths $D(t) = d(t)$. Training the PINN with zero direct observations of $s(t)$ and $e(t)$ demonstrated that the physics residual allows accurate reconstruction of the unobserved compartments (Figure~\ref{fig:e4_hidden_states}), with RMSE $= 8.80 \times 10^{-3}$ on $s(t)$ and $3.80 \times 10^{-3}$ on $e(t)$.
-
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{../figs/fig_e4_hidden_states.eps}
-\caption{Hidden-state recovery (Experiment E4): latent susceptible $s(t)$ and incubating $e(t)$ reconstructed from case and death counts alone.}
+\includegraphics[width=\textwidth]{../figs/fig_e4_hidden_states.eps}
+\caption{Experiment E4: hidden $s(t)$, $e(t)$, $i(t)$ recovered from the same runs.}
 \label{fig:e4_hidden_states}
 \end{figure}
 
@@ -539,16 +581,17 @@ Surveillance networks record only cumulative diagnoses $C(t) = 1 - s(t) - e(t)$ 
 \subsection{Dataset Provenance and Strict Split Protocol}
 We evaluated the framework on empirical surveillance data from the 2014 Ebola epidemic in Sierra Leone ($N = 7{,}092{,}113$), spanning May 25 to September 21, 2014 ($T = 120$ days) \cite{rivers2014modeling,who2014situation}. In accordance with strict instructions, no synthetic datasets are used for real-world calibration:
 \begin{itemize}
-    \item \textbf{Training Window:} Days 0 to 89 (first 75\%, 90 daily observations), used exclusively for training and calibration.
-    \item \textbf{Held-Out Forecast Window:} Days 90 to 119 (remaining 25\%, 30 daily observations), strictly withheld from model fitting.
+    \item \textbf{Training Window:} Days 0 to 89 (first 75\%), used exclusively for training and calibration.
+    \item \textbf{Held-Out Forecast Window:} Days 90 to 119 (remaining 25\%), strictly withheld from model fitting.
 \end{itemize}
+Only 37 of the 120 days are actual WHO report dates (28 in the training window); the other days are linear interpolations between reports. The baselines fit the daily series; the PINN fits only the 28 real reports.
 
 \subsection{Benchmark Comparisons and Quantitative Results}
 We benchmarked the PINN against:
 \begin{enumerate}
     \item \textbf{Constant-$\beta$ Least Squares:} Standard SEIRD with constant $\beta$ fitted via trust-region reflective optimization.
     \item \textbf{Piecewise-$\beta$ Least Squares:} Segmented into 30-day blocks with second-order difference regularization.
-    \item \textbf{PINN with Dynamic $\beta(t)$:} Neural network trained on $[0, 90]$ days, extrapolating via the terminal learned transmission rate $\hat{\beta}(90)$.
+    \item \textbf{PINN (Section~\ref{sec:pinn}):} trained on the real reports in days 0--89 with 5 seeds; the forecast is the median of the 5 seed forecasts, with $\beta$ held at its mean over days 76--89.
 \end{enumerate}
 
 Table~\ref{tab:e5_metrics} and Figure~\ref{fig:e5_real_forecast} present the held-out forecast metrics.
@@ -564,34 +607,89 @@ Method & Target & MAE & RMSE & Relative Error (\%) \\
 Constant-$\beta$ Least Squares & Cases & 772.5 & 852.3 & 55.3\% \\
 Constant-$\beta$ Least Squares & Deaths & 276.1 & 326.2 & 54.2\% \\
 \midrule
-\textbf{Piecewise-$\beta$ Least Squares} & \textbf{Cases} & \textbf{136.9} & \textbf{179.4} & \textbf{9.8\%} \\
+Piecewise-$\beta$ Least Squares & Cases & 136.9 & 179.4 & 9.8\% \\
 \textbf{Piecewise-$\beta$ Least Squares} & \textbf{Deaths} & \textbf{6.3} & \textbf{7.8} & \textbf{1.2\%} \\
 \midrule
-\textbf{PINN with Dynamic $\beta(t)$} & \textbf{Cases} & \textbf{98.3} & \textbf{116.0} & \textbf{7.0\%} \\
-PINN with Dynamic $\beta(t)$ & Deaths & 10.6 & 12.2 & 2.1\% \\
+\textbf{PINN ensemble (5 seeds)} & \textbf{Cases} & \textbf{130.6} & \textbf{162.5} & \textbf{9.4\%} \\
+PINN ensemble (5 seeds) & Deaths & 42.4 & 49.1 & 8.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{../figs/fig_e5_real_forecast.eps}
-\caption{Real-world epidemiological forecast comparison (Experiment E5) on the 2014 Sierra Leone Ebola dataset, calibrated on days 0--89 and tested on days 90--119.}
+\includegraphics[width=\textwidth]{../figs/fig_e5_real_forecast.eps}
+\caption{Experiment E5 on the 2014 Sierra Leone data, calibrated on days 0--89 and tested on days 90--119. Right: the PINN's $R_t$ over the training window.}
 \label{fig:e5_real_forecast}
 \end{figure}
 
 \subsection{Critical Scientific Interpretation}
-In compliance with project marking criteria welcoming honest negative results:
 \begin{enumerate}
-    \item \textbf{Scale-Normalized PINN Predictive Fidelity:} By formulating the neural network with characteristic epidemic scaling ({\text{scale}} = \max C_{\text{train}}$), the PINN resolves the acute-phase scale imbalance, achieving an out-of-sample held-out relative error of \textbf{7.0\%} on cases (MAE .3$ cases, ^2 = 0.830$) and \textbf{2.1\%} on deaths (MAE .6$ deaths, ^2 = 0.957$).\n    \item \textbf{Comparative Benchmark Evaluation:} While unscaled neural formulations suffer from gradient vanishing and extrapolation drift when /N \sim 10^{-5}$, the scale-normalized PINN captures continuous behavioral interventions smoothly ($\hat{\beta}(t)$ declining from .308$ to .262\text{ day}^{-1}$), outperforming constant-$\beta$ least squares by over 87\% and achieving lower case forecast error than piecewise-constant calibration (.8\%$).\n\end{enumerate}
+    \item \textbf{Cases:} the PINN has the lowest case error, 9.4\% against 9.8\% for piecewise-$\beta$ and 55.3\% for constant-$\beta$; scored on the real report dates only, 11.0\% against 11.8\%. The lead is narrow: the 5 seeds individually give 4.9--17.1\%.
+    \item \textbf{Deaths:} piecewise-$\beta$ is clearly better (1.2\% against 8.3\%). The PINN learns a case-fatality ratio of 45--48\% and over-forecasts deaths.
+    \item \textbf{What the PINN adds:} besides the forecast, it gives $R_t$ over the training window (Figure~\ref{fig:e5_real_forecast}, right): about 1.5 in June 2014, falling to about 1.1 in July and August, still above 1. Every method under-forecasts the end of the window, when cases accelerated in September 2014; holding $\beta$ at its recent value cannot anticipate that.
+\end{enumerate}
 
-\section{Ablation Studies (Experiment E6)}
-Hyperparameter ablations evaluated collocation sampling density $N_f \in \{50, 100, 200, 400\}$ and physics loss weight $w_{\text{ode}} \in \{0.01, 0.1, 1.0, 10.0\}$ (Figure~\ref{fig:e6_ablations}). Error decreased as $N_f$ increased up to 200 points, while over-weighting the physics loss ($w_{\text{ode}} = 10.0$) induced optimization stiffness that degraded data fitting.
+\subsection{The whole epidemic: rolling forecasts (Experiment E7)}
+\label{sec:e7}
+A single 30-day window gives one comparison. To test the PINN across the epidemic we used the WHO situation-report data published on the Humanitarian Data Exchange \cite{who2016hdx}: laboratory-confirmed cumulative cases and deaths for Sierra Leone, 29 August 2014 to 6 November 2015 (238 report dates, no interpolation; 6 death reports that WHO later revised downwards are excluded). At each of 8 forecast origins, every 28 days from 16 January to 31 July 2015, each method is fitted to the previous 8 weeks of reports only and forecasts the next 4 weeks. The PINN (median of 3 seeds) is compared with the two baselines above, which here also estimate $\mu$ and the initial conditions.
+
+\begin{table}[htbp]
+\centering
+\caption{Experiment E7: mean error over 8 rolling 4-week forecasts (16 Jan -- 31 Jul 2015), WHO laboratory-confirmed data.}
+\label{tab:e7}
+\begin{tabular}{lcccc}
+\toprule
+Method & Cases MAE & Cases RMSE & Error in 4-week new cases & Deaths MAE \\
+\midrule
+\textbf{PINN ensemble (3 seeds)} & \textbf{100.7} & \textbf{106.7} & \textbf{153.6} & 70.5 \\
+Piecewise-$\beta$ LS & 108.1 & 115.7 & 169.9 & \textbf{42.0} \\
+Constant-$\beta$ LS & 120.9 & 129.5 & 192.5 & 50.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The PINN has the lowest case error on average and at 5 of the 8 origins (Table~\ref{tab:e7}, Figure~\ref{fig:e7}); on deaths it is the least accurate, as in E5. Death reports in this period are noisier than case reports, and the PINN's death forecast carries any error in its learned $\mu$. The PINN's $R_t$ is below 1 in almost every training window from January 2015, consistent with the decline of the epidemic.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\textwidth]{../figs/fig_e6_ablations.eps}
-\caption{Ablation studies (Experiment E6) showing the impact of collocation density $N_f$ and ODE loss weight $w_{\text{ode}}$.}
+\includegraphics[width=\textwidth]{../figs/fig_e7_rolling_forecasts.eps}
+\caption{Experiment E7: 4-week forecasts from 8 origins on the WHO 2014--15 Sierra Leone data (top), the PINN's $R_t$ in each training window (bottom left), and the mean errors (bottom right).}
+\label{fig:e7}
+\end{figure}
+
+\section{Ablation Studies (Experiment E6)}
+\label{sec:e6}
+On the E3 problem with 5\% noise (seeds 42 and 43) we changed one design choice at a time (Table~\ref{tab:e6}, Figure~\ref{fig:e6_ablations}).
+
+\begin{table}[htbp]
+\centering
+\caption{Experiment E6: ablation on the E3 problem (5\% noise, mean of 2 seeds).}
+\label{tab:e6}
+\begin{tabular}{lccc}
+\toprule
+Setting & $\beta(t)$ RMSE & hidden $e(t)$ rel.\ $L_2$ & $\mu$ rel.\ error \\
+\midrule
+\textbf{Full method} & \textbf{0.044} & 0.076 & 0.063 \\
+Physics weight $w_{\text{ode}} = 10$ (instead of 1) & 0.120 & 0.192 & 0.140 \\
+Adam only (8000 iterations, no L-BFGS) & 0.243 & 0.957 & 0.176 \\
+No Fourier features & 0.058 & 0.079 & 0.045 \\
+Absolute residuals & 0.046 & 0.067 & 0.040 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{The L-BFGS stage is essential}: with Adam alone $\beta(t)$ stays almost flat and the hidden $e(t)$ is wrong by 96\%.
+    \item \textbf{Loss balance matters}: with $w_{\text{ode}} = 10$ the network obeys the ODE at the expense of the data, and every error roughly doubles or triples.
+    \item \textbf{Fourier features} lower the $\beta$ RMSE by about 25\%.
+    \item \textbf{Relative residuals} make little difference in this inverse problem, where the data already fix the size of every compartment, but they are decisive in the forward problem: repeating E2 with absolute residuals gives relative $L_2$ errors of 0.75--1.0 in every compartment instead of below $1.5\times10^{-3}$.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{../figs/fig_e6_ablations.eps}
+\caption{Experiment E6: effect of each design choice on the $\beta(t)$ error and the hidden-state error (logarithmic axes).}
 \label{fig:e6_ablations}
 \end{figure}
 
@@ -600,7 +698,10 @@ Key limitations include:
 \begin{enumerate}
     \item \textbf{Surveillance Under-reporting and Funeral Transmission:} Ebola transmission involves traditional burial rituals and healthcare worker infections not explicitly disaggregated in a 5-compartment model.
     \item \textbf{Structural Identifiability:} Inferring $\sigma, \gamma,$ and $\beta(t)$ simultaneously from aggregate clinical counts is structurally unidentifiable; fixing $\sigma$ and $\gamma$ from clinical literature is essential.
-    \item \textbf{Extrapolation Instability:} Forward forecasting with neural networks requires explicit scenario priors to prevent unbounded compounding errors.
+    \item \textbf{Forecasting assumes constant transmission:} the PINN knows $\beta(t)$ only inside its training window. Forecasts hold it at its recent value, so they cannot anticipate a new intervention or a resurgence.
+    \item \textbf{Sharp changes are smoothed:} the smoothness penalty and the continuous network spread an abrupt change in $\beta$ over several days (E3).
+    \item \textbf{Deaths:} the PINN forecasts deaths less accurately than the piecewise-$\beta$ baseline (E5, E7); its death forecast depends on the learned $\mu$, and death reports were revised several times.
+    \item \textbf{Loss balancing and cost:} results depend on the loss weights (E6) and each fit takes about 1--5 minutes on one CPU core, against seconds for least squares.
 \end{enumerate}
 
 \section{Academic Honesty and AI Acknowledgement}
@@ -608,6 +709,7 @@ In compliance with Course Instruction 5:
 \begin{itemize}
     \item \textbf{AI Assistants (Claude / Antigravity / Gemini):} Utilized for checking mathematical matrix derivations, generating initial LaTeX scaffolding, and structuring PyTorch autograd loss functions.
     \item \textbf{Module 2 (Mathematical Analysis):} I worked through the derivations of $R_0$, the equilibria and their stability, and the final-size relation, and used Claude (Anthropic) to check them. It pointed out that the disease-free states are stable but not asymptotically stable, and that the old final-size check stopped too early. Claude also helped write the analysis code (growth-rate check, final-size check, LHS--PRCC) and helped me word the section clearly. I read and ran all the code; every number in the section comes from the notebook. Details are in \texttt{report/ai\_use\_member2.md}.
+    \item \textbf{Module 4 (PINN):} The PINN and Experiments E2--E4, E6 and E7 (and the PINN rows of E5) were rebuilt on 26 October 2026 with Claude (Anthropic, via Claude Code), which designed and wrote the code (\texttt{seird\_pinn.py}, \texttt{pinn\_experiments.py}, \texttt{pinn\_figures.py}, \texttt{data\_pipeline\_who.py}), ran the experiments and drafted Sections~\ref{sec:pinn}--\ref{sec:e6}. All numbers come from the saved results of that code. Details are in \texttt{report/ai\_use\_member4.md}.
     \item \textbf{Team Execution and Verification:} All equations, literature syntheses, numerical solvers, simulations, convergence studies, figure generations, and scientific interpretations were independently verified, executed, and understood across all project modules.
 \end{itemize}
 
