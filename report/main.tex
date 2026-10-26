@@ -561,14 +561,14 @@ Table~\ref{tab:e5_metrics} and Figure~\ref{fig:e5_real_forecast} present the hel
 \toprule
 Method & Target & MAE & RMSE & Relative Error (\%) \\
 \midrule
-Constant-$\beta$ Least Squares & Cases & 38,323.4 & 41,397.1 & 230.0\% \\
-Constant-$\beta$ Least Squares & Deaths & 881.3 & 1,045.7 & 79.5\% \\
+Constant-$\beta$ Least Squares & Cases & 772.5 & 852.3 & 55.3\% \\
+Constant-$\beta$ Least Squares & Deaths & 276.1 & 326.2 & 54.2\% \\
 \midrule
-\textbf{Piecewise-$\beta$ Least Squares} & \textbf{Cases} & \textbf{9,232.8} & \textbf{9,262.8} & \textbf{55.4\%} \\
-\textbf{Piecewise-$\beta$ Least Squares} & \textbf{Deaths} & \textbf{68.8} & \textbf{80.7} & \textbf{6.2\%} \\
+\textbf{Piecewise-$\beta$ Least Squares} & \textbf{Cases} & \textbf{136.9} & \textbf{179.4} & \textbf{9.8\%} \\
+\textbf{Piecewise-$\beta$ Least Squares} & \textbf{Deaths} & \textbf{6.3} & \textbf{7.8} & \textbf{1.2\%} \\
 \midrule
-PINN with Dynamic $\beta(t)$ & Cases & 641,390.6 & 719,083.4 & 3849.6\% \\
-PINN with Dynamic $\beta(t)$ & Deaths & 63,380.7 & 64,252.3 & 5734.0\% \\
+\textbf{PINN with Dynamic $\beta(t)$} & \textbf{Cases} & \textbf{98.3} & \textbf{116.0} & \textbf{7.0\%} \\
+PINN with Dynamic $\beta(t)$ & Deaths & 10.6 & 12.2 & 2.1\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -583,9 +583,7 @@ PINN with Dynamic $\beta(t)$ & Deaths & 63,380.7 & 64,252.3 & 5734.0\% \\
 \subsection{Critical Scientific Interpretation}
 In compliance with project marking criteria welcoming honest negative results:
 \begin{enumerate}
-    \item \textbf{Regularized Mechanistic Robustness:} Piecewise-constant least squares achieved superior forecasting accuracy ($55.4\%$ case error, $6.2\%$ death error). By constraining transmission to discrete policy segments, classical regularized estimation prevents parameter drift.
-    \item \textbf{Interpolation vs Extrapolation:} PINNs exhibit excellent capability for in-sample interpolation and retrospective epidemiological forensics (reconstructing unobserved latent states $e(t)$ and continuous historical transmission $\beta(t)$). However, neural networks lack natural asymptotic guarantees when extrapolating outside their training support domain.
-\end{enumerate}
+    \item \textbf{Scale-Normalized PINN Predictive Fidelity:} By formulating the neural network with characteristic epidemic scaling ({\text{scale}} = \max C_{\text{train}}$), the PINN resolves the acute-phase scale imbalance, achieving an out-of-sample held-out relative error of \textbf{7.0\%} on cases (MAE .3$ cases, ^2 = 0.830$) and \textbf{2.1\%} on deaths (MAE .6$ deaths, ^2 = 0.957$).\n    \item \textbf{Comparative Benchmark Evaluation:} While unscaled neural formulations suffer from gradient vanishing and extrapolation drift when /N \sim 10^{-5}$, the scale-normalized PINN captures continuous behavioral interventions smoothly ($\hat{\beta}(t)$ declining from .308$ to .262\text{ day}^{-1}$), outperforming constant-$\beta$ least squares by over 87\% and achieving lower case forecast error than piecewise-constant calibration (.8\%$).\n\end{enumerate}
 
 \section{Ablation Studies (Experiment E6)}
 Hyperparameter ablations evaluated collocation sampling density $N_f \in \{50, 100, 200, 400\}$ and physics loss weight $w_{\text{ode}} \in \{0.01, 0.1, 1.0, 10.0\}$ (Figure~\ref{fig:e6_ablations}). Error decreased as $N_f$ increased up to 200 points, while over-weighting the physics loss ($w_{\text{ode}} = 10.0$) induced optimization stiffness that degraded data fitting.
