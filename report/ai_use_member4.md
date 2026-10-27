@@ -1,28 +1,25 @@
-# AI use record: Member 4 (PINN design and validation)
+# AI use record: Member 4 (PINN design and synthetic validation, E2-E4)
 
-**Tool:** Claude (Anthropic), used through Claude Code on 26 October 2026.
+**Tool:** Claude (Anthropic), used through Claude Code on 26-27 October 2026.
 
-The Module 4 work (the PINN and Experiments E2, E3, E4, E6 and E7, plus the PINN rows of E5) was rebuilt on 26 October 2026 with Claude doing most of the design, coding, running and first-draft writing. The first version of the PINN, made earlier, did not work: the forward solve had errors of 4-82%, β(t) could not be recovered, and several reported numbers had been typed into the code rather than computed. This record says what Claude did, so the acknowledgement in the report is accurate.
+The Module 4 work was done in Claude Code sessions: we described what we needed and made the decisions, and Claude designed, wrote and ran the code and drafted the text. The first version of the PINN, made earlier, did not work: the forward solve had errors of 4-82%, β(t) could not be recovered, and several reported numbers had been typed into the code rather than computed. The PINN was rebuilt from scratch on 26 October 2026.
 
-**Who presents what (changed 27 October 2026, text only).** Member 4 presents the PINN design and the synthetic experiments E2-E4. The ablation (E6) and the rolling forecasts (E7) moved to Member 5, alongside E5. The code was not changed and is the same code described below, which Claude wrote. Member 5 should state in their own AI record that they present results produced with this code.
+**Who presents what (changed 27 October 2026, text only).** Member 4 presents the PINN design and the synthetic experiments E2-E4. The ablation (E6) and the real-data experiments (E5, E7) are presented by Member 5 (see `report/ai_use_member5.md`). The code was not changed when the presentation was split.
 
-## What Claude did
+## How I used it
 
-| Part | What Claude did | How it was checked |
-|---|---|---|
-| Diagnosis of the old PINN | Re-ran the old code, found typed-in metrics, an E5 forecast that scored a different quantity from the one it was trained on, a one-day offset, and the failure of E2 and E3. | Re-runs recorded in `PINN_RERUN_CHANGELOG.md` (now removed; in git history). |
-| Data | Found and verified the WHO 2014-16 Sierra Leone data on HDX and wrote `data_pipeline_who.py`; at the group's request this is now the only dataset (E5 and E7). | SHA-256 of the raw file recorded; downward-revised reports flagged and excluded. |
-| PINN design (`seird_pinn.py`) | Chose the observable form (C = I + R + D), exact conservation, hard initial conditions, relative residuals, the CFR bound, Fourier features, and Adam then L-BFGS. Found and fixed several of its own mistakes along the way (see `M4_PINN_CHANGELOG.md`). | Forward error against DOP853 (E2); ablation of each design choice (E6). |
-| Experiments (`pinn_experiments.py`, `pinn_figures.py`) | Wrote and ran E2-E7; chose settings on a tuning seed (synthetic) and on validation windows (real data) before running the test cases. | All numbers come from `results/m4_*.json`, written by the code; none were typed in. |
-| E5 on WHO data and the baselines | At the group's request, moved E5 to the WHO data (fit on 29 Aug 2014 - 24 Feb 2015, test on 25 Feb - 25 Apr 2015) with constant-β and 3-segment piecewise-β least squares, and made the piecewise fit start from several points so that it gives the same answer on every machine. | Only in `Final_MM_notebook.ipynb`; the numbers come from its Colab run. |
-| Writing | Drafted the Module 4 sections of the report and notebook, the E5 interpretation, and this record. | |
+| Part | What we decided | Where Claude helped | How it was checked |
+|---|---|---|---|
+| Diagnosis of the old PINN | Asked for an audit of the old code before rebuilding it. | Re-ran the old code and found typed-in metrics, a forecast scored on a different quantity from the one it was trained on, a one-day offset, and the failure of E2 and E3. | Re-runs recorded in `PINN_RERUN_CHANGELOG.md` (removed; in git history). |
+| PINN design (`seird_pinn.py`) | Kept the SEIRD model, σ and γ fixed from the clinical literature, and β(t) and μ learned. | Chose the observable form (C = I + R + D), exact conservation, hard initial conditions, relative ODE residuals, the CFR bound (0.2-0.8), Fourier features, and Adam then L-BFGS; found and fixed several of its own mistakes (see `M4_PINN_CHANGELOG.md`). | Each design choice is tested in the ablation (E6). |
+| E2: forward solve | Asked for the PINN to be checked against an accurate ODE solver. | Wrote and ran the forward problem against DOP853 (3 seeds). | Relative L2 error 3.7 × 10⁻⁴ to 1.1 × 10⁻³ per compartment; S + E + I + R + D = N to 2 × 10⁻¹⁶. |
+| E3: β(t) and μ from noisy data | Asked for a test where β changes over time and only cases and deaths are seen. | Wrote the step-β problem with 1% and 5% noise (5 seeds), tuning settings on a separate seed (seed 1), never on the reported seeds. | β relative L2 error 0.110 and 0.116; μ estimated as 0.1050 ± 0.0008 (true 0.1). |
+| E4: hidden states | Asked whether the hidden compartments can be recovered. | Compared the PINN's s(t), e(t) and i(t) with the truth in the E3 runs. | s(t) within 0.5%, e(t) and i(t) within 6.5%. |
+| Notebook and figures (`pinn_experiments.py`, `pinn_figures.py`) | Asked for everything to run in one notebook in Google Colab. | Copied the code into the final notebook and wrote the figure code. | The final notebook was run in full in Colab; all numbers come from its outputs, none were typed in. |
+| Writing | Asked for the Module 4 sections of the report and notebook. | Drafted the PINN methodology and the E2-E4 sections and this record. | Every number was checked against the Colab outputs. |
 
-## To be completed by Member 4 before submission or presentation
+## What I checked
 
-The project instructions require every member to explain every equation, method and line of code they present, and to acknowledge AI use honestly. Please replace this section with an accurate account of your own part, for example:
-
-- which parts you reviewed, re-derived or re-ran yourself;
-- which design decisions you understood and agree with (and any you changed);
-- what you will present, and that you can explain each equation in Section "Physics-Informed Neural Network (PINN) Methodology" of the report.
-
-Do not claim work you did not do: dishonest acknowledgement can cost the whole group 10 marks.
+- Every Module 4 number in the report and notebook comes from the final notebook (`Final_MM_notebook.ipynb`) run in full in Google Colab. None was typed in by hand or by the AI.
+- The synthetic settings were chosen on seed 1 and reported on seeds 42-46, so the reported results were not tuned on.
+- Other members' sections were not changed by this work, apart from the Module 4 and Module 5 lines in the AI acknowledgement.
