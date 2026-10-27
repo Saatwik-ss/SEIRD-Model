@@ -56,9 +56,8 @@ In accordance with project instructions ("Published models may be used as a star
 ## 3. Real-World Outbreak Dataset Specification
 
 - **Outbreak Target**: Republic of Sierra Leone 2014 Ebola Outbreak ($N = 7{,}092{,}113$).
-- **Primary Public Source**: Caitlin Rivers' machine-readable GitHub repository (`cmrivers/ebola`, file: `country_timeseries.csv`) derived directly from WHO Situation Reports.
-- **Alternative Repositories**: Humanitarian Data Exchange (HDX, `ebola-cases-2014`) and Our World in Data (OWID).
-- **Partition**: First 75% chronological points (Days 0--89) for model calibration, remaining 25% (Days 90--119) strictly held out for testing.
+- **Source**: WHO Ebola situation reports as published on the Humanitarian Data Exchange (HDX, dataset `ebola-cases-2014`, file `ebola_data_db_format.csv`): laboratory-confirmed cumulative cases and deaths for Sierra Leone, 29 Aug 2014 - 6 Nov 2015, real report dates only (no interpolation).
+- **Partition (E5)**: 29 Aug 2014 - 25 Apr 2015 (days 0-239); first 75% (days 0-179) for model calibration, remaining 25% (days 180-239) strictly held out for testing. E7 uses rolling 8-week fits and 4-week forecasts on the full series.
 - **Notice**: No synthetic datasets are to be used for the final calibration task; real data must be fetched using instructions in `data/README.md`.
 
 ---

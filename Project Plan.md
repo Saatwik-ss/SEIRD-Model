@@ -92,17 +92,14 @@ Module 1 leads substantive mathematical modeling:
 ## 6. Real-World Dataset Acquisition & Provenance Protocol
 
 **Notice**: As instructed, no synthetic datasets are used for the real-world validation task. Data must be acquired directly from verifiable public archives:
-1. **Primary Public Repository**:
-   - Caitlin Rivers' curated machine-readable Ebola archive on GitHub:  
-     `https://github.com/cmrivers/ebola` (`country_timeseries.csv`).
+1. **Data used**:
+   - WHO Ebola situation reports as published on the Humanitarian Data Exchange (HDX):  
+     `https://data.humdata.org/dataset/ebola-cases-2014` (`ebola_data_db_format.csv`).
 2. **Authoritative Primary Source**:
    - World Health Organization (WHO) Ebola Situation Reports Archive:  
      `https://www.who.int/ebola/situation-reports/archive`
-3. **Alternative Public Mirrors**:
-   - Humanitarian Data Exchange (HDX): `https://data.humdata.org/dataset/ebola-cases-2014`
-   - Our World in Data (OWID): `https://github.com/owid/etl`
-4. **Acquisition & Extraction Task**:
-   - Filter `country_timeseries.csv` for `SierraLeone`, extract dates from May 25, 2014 to September 21, 2014 ($T = 120$ days), and generate standard cumulative/daily features per `data/README.md`.
+3. **Acquisition & Extraction Task**:
+   - Keep the laboratory-confirmed cumulative cases and deaths for Sierra Leone, 29 Aug 2014 - 6 Nov 2015, at their real report dates (no interpolation), dropping reports that WHO later revised downwards (see `data/README.md`). E5 uses 29 Aug 2014 - 25 Apr 2015 with a 75/25 chronological split.
 
 ---
 

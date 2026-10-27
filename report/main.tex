@@ -45,7 +45,7 @@
 \maketitle
 
 \begin{abstract}
-Compartmental epidemic models are foundational for public health planning, yet standard formulations rely on static transmission coefficients ($\beta$) that fail to accommodate behavioral adjustments, non-pharmaceutical interventions, and safe burial practices. Furthermore, surveillance networks capture only manifest clinical outcomes (diagnosed cases and hospital mortalities), leaving the incubating latent class and the depleting susceptible host pool unobserved. In this project, we develop and evaluate a Physics-Informed Neural Network (PINN) framework to reconstruct latent states and discover time-varying transmission functions $\beta(t)$ in an SEIRD dynamical system, using the 2014--2016 West African Ebola Virus Disease (EVD) epidemic in Sierra Leone ($N = 7{,}092{,}113$) as a focal case study. In accordance with course guidelines requiring original analysis upon published models, we first present a rigorous comparative synthesis of three benchmark Ebola models (Legrand et al., Rivers et al., and Althaus), deriving exact phase-plane trajectory relations $i(s)$, the theoretical peak infection threshold $i_{\max}$, and the critical intervention bounds $p_c = 1 - 1/R_0$. We derive the basic reproduction number $R_0 = \beta/(\gamma+\mu) \approx 2.00$ via the next-generation matrix, establish disease-free equilibrium stability ($R_0 s^* < 1$), and verify theoretical final-size equations against high-precision ODE simulations. Vectorized forward Euler and classical Runge-Kutta 4 solvers are implemented from scratch and benchmarked against an adaptive DOP853 integrator ($rtol=10^{-12}, atol=10^{-14}$), demonstrating empirical convergence orders of $1.001$ and $3.736$. Our PINN solves the forward problem to a relative error below $2\times 10^{-3}$, and from noisy cumulative cases and deaths alone it recovers a step change in $\beta(t)$ to 11--12\%, the death rate $\mu$ to 5\%, the hidden susceptible fraction to 0.5\% and the exposed and infectious compartments to 6.5\%; an ablation shows which design choices make this work. On a 120-day surveillance dataset from Sierra Leone with a strict 75\%/25\% chronological split, the PINN's held-out case error is 11.3\%, against 60.8\% for constant-$\beta$ least squares and \blank{} for piecewise-$\beta$ least squares. Over 8 rolling 4-week forecasts on the whole 2014--15 epidemic (WHO data), its mean absolute case error is 96.8 cases, against 120.9 (constant-$\beta$) and \blank{} (piecewise-$\beta$); its death forecasts there are less accurate than constant-$\beta$'s (69.7 against 50.7).
+Compartmental epidemic models are foundational for public health planning, yet standard formulations rely on static transmission coefficients ($\beta$) that fail to accommodate behavioral adjustments, non-pharmaceutical interventions, and safe burial practices. Furthermore, surveillance networks capture only manifest clinical outcomes (diagnosed cases and hospital mortalities), leaving the incubating latent class and the depleting susceptible host pool unobserved. In this project, we develop and evaluate a Physics-Informed Neural Network (PINN) framework to reconstruct latent states and discover time-varying transmission functions $\beta(t)$ in an SEIRD dynamical system, using the 2014--2016 West African Ebola Virus Disease (EVD) epidemic in Sierra Leone ($N = 7{,}092{,}113$) as a focal case study. In accordance with course guidelines requiring original analysis upon published models, we first present a rigorous comparative synthesis of three benchmark Ebola models (Legrand et al., Rivers et al., and Althaus), deriving exact phase-plane trajectory relations $i(s)$, the theoretical peak infection threshold $i_{\max}$, and the critical intervention bounds $p_c = 1 - 1/R_0$. We derive the basic reproduction number $R_0 = \beta/(\gamma+\mu) \approx 2.00$ via the next-generation matrix, establish disease-free equilibrium stability ($R_0 s^* < 1$), and verify theoretical final-size equations against high-precision ODE simulations. Vectorized forward Euler and classical Runge-Kutta 4 solvers are implemented from scratch and benchmarked against an adaptive DOP853 integrator ($rtol=10^{-12}, atol=10^{-14}$), demonstrating empirical convergence orders of $1.001$ and $3.736$. Our PINN solves the forward problem to a relative error below $2\times 10^{-3}$, and from noisy cumulative cases and deaths alone it recovers a step change in $\beta(t)$ to 11--12\%, the death rate $\mu$ to 5\%, the hidden susceptible fraction to 0.5\% and the exposed and infectious compartments to 6.5\%; an ablation shows which design choices make this work. On WHO surveillance data for Sierra Leone, with a strict 75\%/25\% chronological split of 29 August 2014 -- 25 April 2015, the PINN's held-out case error is \blank{}, against \blank{} for constant-$\beta$ least squares and \blank{} for piecewise-$\beta$ least squares. Over 8 rolling 4-week forecasts on the whole 2014--15 epidemic (WHO data), its mean absolute case error is 96.8 cases, against 120.9 (constant-$\beta$) and \blank{} (piecewise-$\beta$); its death forecasts there are less accurate than constant-$\beta$'s (69.7 against 50.7).
 \end{abstract}
 
 \section{Introduction and Biological Motivation}
@@ -65,13 +65,13 @@ The primary objectives of this project are:
     \item Carry out rigorous dynamical systems analysis, including derivation of the basic reproduction number $R_0 = \beta/(\gamma+\mu)$ via the next-generation matrix, disease-free equilibrium stability conditions, transcendental final-size equation verification, and Latin Hypercube global sensitivity analysis (LHS-PRCC).
     \item Implement vectorized numerical solvers (Forward Euler and RK4) from scratch, confirming machine-precision conservation invariant preservation and verifying theoretical convergence orders against a high-precision DOP853 benchmark.
     \item Construct a dual-network PINN architecture (state network $\mathcal{NN}_\theta$ and transmission network $\mathcal{NN}_\phi$) and validate on synthetic test cases for forward integration, inverse $\beta(t)$ discovery under noise, and latent state reconstruction ($s(t)$ and $e(t)$) from case and death observations alone.
-    \item Apply the methodology to a 120-day empirical Ebola surveillance dataset from Sierra Leone, applying a strict 75\% training and 25\% held-out test split, and quantitatively benchmark against constant-$\beta$ and piecewise-constant classical least-squares models; extend the benchmark to rolling forecasts over the whole 2014--15 epidemic, and measure which PINN design choices matter (ablation).
+    \item Apply the methodology to WHO Ebola surveillance data for Sierra Leone (2014--15), applying a strict 75\% training and 25\% held-out test split, and quantitatively benchmark against constant-$\beta$ and piecewise-constant classical least-squares models; extend the benchmark to rolling forecasts over the whole 2014--15 epidemic, and measure which PINN design choices matter (ablation).
 \end{enumerate}
 
 \section{Governing Model Assumptions}
 To ensure biological consistency with Ebola epidemiology, the dynamical system is formulated under the following assumptions:
 \begin{enumerate}
-    \item \textbf{Closed Population:} The total population of Sierra Leone ($N = 7{,}092{,}113$, 2014 census) is closed over the acute outbreak window ($T = 120$ days); natural vital demographics (non-Ebola births and deaths) are neglected as their timescale ($\sim 50$ years) far exceeds the epidemic epoch.
+    \item \textbf{Closed Population:} The total population of Sierra Leone ($N = 7{,}092{,}113$, 2014 census) is closed over the modelled outbreak window (120 days in the synthetic experiments, at most 240 days of real data); natural vital demographics (non-Ebola births and deaths) are neglected as their timescale ($\sim 50$ years) far exceeds the epidemic epoch.
     \item \textbf{Homogeneous Mixing:} Contacts between susceptible and infectious hosts are assumed to be well-mixed at the national population scale.
     \item \textbf{Permanent Sterilizing Immunity:} Surviving individuals entering the Recovered compartment ($R$) develop robust neutralizing antibodies with no waning immunity during the modeled timeframe.
     \item \textbf{Clinically Anchored Transition Timescales:} The mean incubation latency period $1/\sigma \approx 9.4$ days ($\sigma \approx 0.1064\text{ day}^{-1}$) and mean infectious duration among survivors $1/\gamma \approx 7.0$ days ($\gamma \approx 0.1429\text{ day}^{-1}$) are fixed from clinical consensus (WHO Ebola Response Team \cite{who2014ebola}) to preserve parameter identifiability.
@@ -526,7 +526,7 @@ Adam \cite{kingma2015adam} (learning rate $2\times 10^{-3}$ with cosine decay, 2
 
 To forecast, we take the PINN's states at the end of training, hold $\beta$ at its mean over the last 14 days, keep the learned $\mu$, and integrate the SEIRD equations forward with DOP853. The ensemble forecast is the median over seeds. Holding $\beta$ constant is an assumption: a forecast cannot anticipate a change in transmission that has not yet shown up in the data.
 
-\paragraph{How settings were chosen.} The synthetic settings ($w_{\text{smooth}} = 10^{-4}$, 4 Fourier frequencies, 6000 L-BFGS iterations) were tuned on a separate seed (seed 1), never on the reported seeds 42--46. The real-data settings ($w_{\text{smooth}} = 10^{-3}$, 4 Fourier frequencies, 14-day $\beta$ window) were chosen on validation forecasts made before the first test origin of Section~\ref{sec:e7} and on a fit to days 0--59 of the Module 5 data; no test window was used.
+\paragraph{How settings were chosen.} The synthetic settings ($w_{\text{smooth}} = 10^{-4}$, 4 Fourier frequencies, 6000 L-BFGS iterations) were tuned on a separate seed (seed 1), never on the reported seeds 42--46. The real-data settings ($w_{\text{smooth}} = 10^{-3}$, 4 Fourier frequencies, 14-day $\beta$ window) were chosen on validation forecasts from three origins (24 October, 21 November and 19 December 2014) whose forecasts end on 16 January 2015, before the E5 and E7 test windows, and on an earlier 60-day fit to another Sierra Leone series; no test window was used.
 
 \section{Synthetic Experiments and Hidden-State Inversion}
 
@@ -579,62 +579,64 @@ The transmission rate is recovered to about 11--12\% (Figure~\ref{fig:e3_inverse
 
 \section{Real-World Outbreak Application and Benchmarking}
 
-\subsection{Dataset Provenance and Strict Split Protocol}
-We evaluated the framework on empirical surveillance data from the 2014 Ebola epidemic in Sierra Leone ($N = 7{,}092{,}113$), spanning May 25 to September 21, 2014 ($T = 120$ days) \cite{rivers2014modeling,who2014situation}. In accordance with strict instructions, no synthetic datasets are used for real-world calibration:
+\subsection{Dataset Provenance}
+All real-data experiments use the WHO Ebola situation reports for Sierra Leone as published on the Humanitarian Data Exchange \cite{who2016hdx} (file \texttt{ebola\_data\_db\_format.csv}, SHA-256 recorded in the notebook). We use the laboratory-confirmed cumulative cases and deaths from 29 August 2014, the first Sierra Leone entry, to 6 November 2015, the last report before Sierra Leone was declared Ebola-free: 238 report dates ($N = 7{,}092{,}113$). Confirmed counts are used because the combined ``confirmed, probable and suspected'' totals drop when WHO changed its data sources in November 2014. A cumulative count cannot fall, so a report larger than a later report was revised downwards afterwards; 6 such death reports are excluded. \emph{Nothing is interpolated}: every method is fitted to, and scored on, real report dates only. Day 0 is 29 August 2014.
+
+\subsection{Held-out test (Experiment E5): split protocol}
+E5 uses the first 240 days of the series, 29 August 2014 to 25 April 2015 (days 0--239), which cover the growth of the epidemic, its peak and the start of its decline. Following a strict chronological 75\%/25\% split:
 \begin{itemize}
-    \item \textbf{Training Window:} Days 0 to 89 (first 75\%), used exclusively for training and calibration.
-    \item \textbf{Held-Out Forecast Window:} Days 90 to 119 (remaining 25\%), strictly withheld from model fitting.
+    \item \textbf{Training window:} days 0--179 (29 August 2014 -- 24 February 2015, the first 75\%), \blank{} report dates, used for fitting.
+    \item \textbf{Held-out test window:} days 180--239 (25 February -- 25 April 2015, the last 25\%), \blank{} report dates, never used for fitting or for choosing settings. The PINN's real-data settings were fixed earlier, on validation forecasts that end on 16 January 2015 (Section~\ref{sec:pinn}).
 \end{itemize}
-The daily series is built by linear interpolation between WHO reports: only 36 of the 120 days are real report dates (27 in the training window and 9 in the test window, after dropping one June report whose deaths WHO later revised down). To compare like with like, \emph{every method is fitted to the 27 real reports and scored on the 9 real reports}; interpolated days are not used.
 
 \subsection{Benchmark Comparisons and Quantitative Results}
 We benchmarked the PINN against:
 \begin{enumerate}
-    \item \textbf{Constant-$\beta$ Least Squares:} Standard SEIRD with constant $\beta$ fitted via trust-region reflective optimization.
-    \item \textbf{Piecewise-$\beta$ Least Squares:} Segmented into three 30-day blocks, with a penalty on the difference between neighbouring blocks.
-    \item \textbf{PINN (Section~\ref{sec:pinn}):} 5 seeds; the forecast is the median of the 5 seed forecasts, with $\beta$ held at its mean over days 76--89.
+    \item \textbf{Constant-$\beta$ Least Squares:} SEIRD with a constant $\beta$, fitted with trust-region reflective least squares.
+    \item \textbf{Piecewise-$\beta$ Least Squares:} $\beta$ constant on each of three equal segments of the training window (60 days each), with a penalty on the difference between neighbouring segments.
+    \item \textbf{PINN (Section~\ref{sec:pinn}):} 5 seeds; the forecast is the median of the 5 seed forecasts, with $\beta$ held at its mean over the last 14 training days.
 \end{enumerate}
-The two baselines keep Module 5's models, starting values and loss; only their input changed from the interpolated series to the real reports.
+Both baselines also estimate $\mu$ (with the same case-fatality bounds as the PINN) and the initial numbers exposed and infectious, so they have the same freedom as the PINN. Residuals are scaled by the mean of each series. The piecewise fit integrates the ODE one segment at a time and is started from several points, keeping the lowest cost, so it gives the same answer on every machine.
 
 Table~\ref{tab:e5_metrics} and Figure~\ref{fig:e5_real_forecast} present the held-out forecast metrics.
 
 \begin{table}[htbp]
 \centering
-\caption{Held-out forecast errors on the 9 real WHO report dates in days 90--119. All methods are fitted to the 27 real reports in days 0--89.}
+\caption{Experiment E5: held-out forecast errors on the WHO report dates in days 180--239 (25 Feb -- 25 Apr 2015). All methods are fitted to the reports in days 0--179.}
 \label{tab:e5_metrics}
 \begin{tabular}{lcccc}
 \toprule
 Method & Target & MAE & RMSE & Relative Error (\%) \\
 \midrule
-Constant-$\beta$ Least Squares & Cases & 907.9 & 983.2 & 60.8\% \\
-Constant-$\beta$ Least Squares & Deaths & 340.4 & 386.7 & 64.3\% \\
+Constant-$\beta$ Least Squares & Cases & \blank & \blank & \blank \\
+Constant-$\beta$ Least Squares & Deaths & \blank & \blank & \blank \\
 \midrule
 Piecewise-$\beta$ Least Squares & Cases & \blank & \blank & \blank \\
 Piecewise-$\beta$ Least Squares & Deaths & \blank & \blank & \blank \\
 \midrule
-PINN ensemble (5 seeds) & Cases & 169.0 & 199.7 & 11.3\% \\
-PINN ensemble (5 seeds) & Deaths & 50.9 & 57.9 & 9.6\% \\
+PINN ensemble (5 seeds) & Cases & \blank & \blank & \blank \\
+PINN ensemble (5 seeds) & Deaths & \blank & \blank & \blank \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/fig_e5_real_forecast.png}
-\caption{Experiment E5 on the 2014 Sierra Leone data, fitted to the real reports in days 0--89 and tested on days 90--119. Right: the PINN's $R_t$ over the training window.}
+\fbox{\parbox[c][4cm][c]{0.9\textwidth}{\centering Figure to be added from the Colab run (\texttt{fig\_e5\_real\_forecast}).}}
+\caption{Experiment E5 on the WHO data: fitted to the reports in days 0--179 (29 Aug 2014 -- 24 Feb 2015) and tested on days 180--239 (25 Feb -- 25 Apr 2015). Left and middle: cumulative confirmed cases and deaths; right: the PINN's $R_t$ over the training window.}
 \label{fig:e5_real_forecast}
 \end{figure}
 
 \subsection{Critical Scientific Interpretation}
 \begin{enumerate}
-    \item \textbf{Cases:} the PINN's relative error is 11.3\%, against 60.8\% for constant-$\beta$ and \blank{} for piecewise-$\beta$. The 5 PINN seeds individually give 5.6--21.8\%, so the PINN's result depends noticeably on the initialisation in this short, sparse window, which is why we report the median over seeds.
-    \item \textbf{Deaths:} the PINN's relative error is 9.6\%, against 64.3\% for constant-$\beta$ and \blank{} for piecewise-$\beta$. The PINN over-forecasts deaths at the end of the window (Figure~\ref{fig:e5_real_forecast}, middle).
-    \item \textbf{What the PINN adds:} besides the forecast, it gives $R_t$ over the training window (Figure~\ref{fig:e5_real_forecast}, right): about 1.5 in June 2014, falling to about 1.1--1.2 in July and August, still above 1. The PINN under-forecasts cases at the end of the window, when cases accelerated in September 2014; holding $\beta$ at its recent value cannot anticipate that.
+    \item \textbf{Cases:} the PINN's relative error is \blank{}, against \blank{} for constant-$\beta$ and \blank{} for piecewise-$\beta$. The 5 PINN seeds individually give \blank{}.
+    \item \textbf{Deaths:} the PINN's relative error is \blank{}, against \blank{} for constant-$\beta$ and \blank{} for piecewise-$\beta$.
+    \item \textbf{What the PINN adds:} besides the forecast, it gives $R_t$ over the training window (Figure~\ref{fig:e5_real_forecast}, right): \blank{}.
 \end{enumerate}
 
 \subsection{The whole epidemic: rolling forecasts (Experiment E7)}
 \label{sec:e7}
-A single 30-day window gives one comparison. To test the PINN across the epidemic we used the WHO situation-report data published on the Humanitarian Data Exchange \cite{who2016hdx}: laboratory-confirmed cumulative cases and deaths for Sierra Leone, 29 August 2014 to 6 November 2015 (238 report dates, no interpolation; 6 death reports that WHO later revised downwards are excluded). At each of 8 forecast origins, every 28 days from 16 January to 31 July 2015, each method is fitted to the previous 8 weeks of reports only and forecasts the next 4 weeks. The PINN (median of 3 seeds) is compared with the two baselines above, which here also estimate $\mu$ and the initial conditions.
+A single held-out window gives one comparison. To test the PINN across the whole epidemic, we use rolling forecasts on the full WHO series. At each of 8 forecast origins, every 28 days from 16 January to 31 July 2015, each method is fitted to the previous 8 weeks of reports only and forecasts the next 4 weeks. The PINN (median of 3 seeds) is compared with the same two baselines, with two $\beta$ segments for piecewise-$\beta$.
 
 \begin{table}[htbp]
 \centering
@@ -695,8 +697,8 @@ Key limitations include:
     \item \textbf{Structural Identifiability:} Inferring $\sigma, \gamma,$ and $\beta(t)$ simultaneously from aggregate clinical counts is structurally unidentifiable; fixing $\sigma$ and $\gamma$ from clinical literature is essential.
     \item \textbf{Forecasting assumes constant transmission:} the PINN knows $\beta(t)$ only inside its training window. Forecasts hold it at its recent value, so they cannot anticipate a new intervention or a resurgence.
     \item \textbf{Sharp changes are smoothed:} the smoothness penalty and the continuous network spread an abrupt change in $\beta$ over several days (E3).
-    \item \textbf{Deaths:} in the rolling forecasts the PINN forecasts deaths less accurately than even the constant-$\beta$ baseline (E7), and in E5 it over-forecasts them; its death forecast depends on the learned $\mu$, and death reports were revised several times.
-    \item \textbf{Sensitivity to initialisation:} on the short E5 window, single PINN seeds range from 5.6\% to 21.8\% case error, so an ensemble over seeds is needed.
+    \item \textbf{Deaths:} in the rolling forecasts the PINN forecasts deaths less accurately than even the constant-$\beta$ baseline (E7); its death forecast depends on the learned $\mu$, and death reports were revised several times.
+    \item \textbf{Sensitivity to initialisation:} single PINN seeds can give noticeably different forecasts (E5: \blank{} case error), so an ensemble over seeds is needed.
     \item \textbf{Loss balancing and cost:} results depend on the loss weights (E6) and each fit takes about 1--2 minutes on Colab's CPU, against seconds for least squares.
 \end{enumerate}
 

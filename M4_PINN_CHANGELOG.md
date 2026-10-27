@@ -41,6 +41,12 @@ Summary: the PINN is accurate on synthetic problems. On real data it forecasts *
 
 **Fix (in `Final MM notebook.ipynb` only; `pinn_experiments.py` is unchanged).** Both piecewise-β fits, Module 5's in E5 and the 2-segment one in E7, now integrate the ODE one segment at a time, restarting at each breakpoint. Each starts from several points (9 in each fit) and keeps the lowest cost. The constant-β fits are unchanged. The E6 cell now prints the forward-problem table instead of displaying it. Not yet run: the blanks are filled from the next Colab run of the notebook.
 
+## 1c. E5 moved to the WHO data; the cmrivers dataset removed (27 Oct 2026)
+
+E5 no longer uses Module 5's cmrivers series (25 May - 21 Sep 2014, linear interpolation between reports). It now uses the same WHO HDX series as E7: 29 Aug 2014 - 25 Apr 2015 (days 0-239). Training covers days 0-179 (the first 75%) and the test covers days 180-239. The PINN ensemble (5 seeds) is compared with constant-β and 3-segment piecewise-β least squares, which are E7's baselines and also estimate μ and the initial conditions. The test window starts after the last validation forecast used to choose the PINN settings (16 Jan 2015).
+
+Removed: `data/outbreak_data.csv`, `data/country_timeseries_raw.csv`, `data_pipeline.py`, `results/m4_e5_heldout.json`, the old E5 figure and Figure J, and every mention of that dataset in the final notebook, the report, `data/README.md`, `CONVENTIONS.md` and `Project Plan.md`. The E5 rows in the tables above, and the Module 5 data bullet in Section 3, describe the old E5 and are kept only as history. `pinn_experiments.py` still has the old E5 code and now differs from the notebook, which is the version that runs. The old `notebook.ipynb` is kept unchanged for reference. In the report and notebook, all E5 numbers are blank until the Colab run.
+
 **Also removed:** the R0 forest plot (report figure and the notebook cell that drew it).
 
 **Removed from the report:** the E5 "interpolated protocol" comparison, the E6 "absolute residuals" row of the inverse ablation (no effect, 0.047 vs 0.042), and the E6 figure, which still plots that row.
