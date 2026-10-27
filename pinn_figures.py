@@ -51,8 +51,8 @@ def fig_e3(res):
             preds = np.array([np.array(r) for r in runs[(runs.profile == prof) & (runs.noise == noise)]['beta_pred']])
             lo, hi = preds.min(axis=0), preds.max(axis=0)
             if noise == 0.05:
-                a.fill_between(t, lo, hi, color='#f3c6c0', lw=0, label='5% noise: range over 5 seeds')
-            a.plot(t, preds.mean(axis=0), ls, color=col, lw=2, label=f'{int(noise * 100)}% noise: mean of 5 seeds')
+                a.fill_between(t, lo, hi, color='#f3c6c0', lw=0, label=f'5% noise: range over {len(preds)} seeds')
+            a.plot(t, preds.mean(axis=0), ls, color=col, lw=2, label=f'{int(noise * 100)}% noise: mean of {len(preds)} seeds')
         a.plot(t, res['truth'][prof]['beta'], 'k-', lw=2.2, label=r'true $\beta(t)$')
         a.set(xlabel='Time (days)', ylabel=r'$\beta(t)$ (day$^{-1}$)', title='E3: ' + px.PROFILE_LABELS[prof])
         a.grid(True, ls=':', color='#bbbbbb')
@@ -71,7 +71,7 @@ def fig_e4(res, profile='step'):
         a.plot(t, truth[k], 'k-', lw=2.2, label='true (never observed)')
         for noise, col, ls in [(0.01, '#1f5fbf', '--'), (0.05, '#c0392b', '-.')]:
             preds = np.array([np.array(r) for r in runs[(runs.profile == profile) & (runs.noise == noise)][f'{k}_pred']])
-            a.plot(t, preds.mean(axis=0), ls, color=col, lw=2, label=f'PINN, {int(noise * 100)}% noise (mean of 5)')
+            a.plot(t, preds.mean(axis=0), ls, color=col, lw=2, label=f'PINN, {int(noise * 100)}% noise (mean of {len(preds)})')
         a.set(xlabel='Time (days)', ylabel='Fraction of population', title=f'E4: hidden {lab}')
         a.grid(True, ls=':', color='#bbbbbb')
         a.legend(fontsize=8)
@@ -168,7 +168,7 @@ def fig_e5(res):
     for run in r:
         ax[2].plot(tg, np.array(run['beta_grid']) / (px.sp.GAMMA + run['mu']), color='#b48ec2', lw=1)
     ax[2].plot(tg, np.median([np.array(run['beta_grid']) / (px.sp.GAMMA + run['mu']) for run in r], axis=0),
-               color='#7b2d8e', lw=2.2, label='median of 5 seeds')
+               color='#7b2d8e', lw=2.2, label=f'median of {len(r)} seeds')
     ax[2].axhline(1.0, color='k', ls='--', lw=1)
     ax[2].set(xlabel='Days since 25 May 2014', ylabel=r'$R_t$', title=r'E5: PINN $R_t=\beta(t)s(t)/(\gamma+\mu)$, training window')
     ax[2].grid(True, ls=':', color='#bbbbbb')

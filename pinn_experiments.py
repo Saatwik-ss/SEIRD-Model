@@ -448,7 +448,7 @@ def run_e7(origins=None, force=False, n_seeds=3, overrides=None, beta_window=REA
 def summarise_e7(res, split='test'):
     rows = []
     origins = [o for o in res['origins'] if o['split'] == split]
-    for name, lab in [('pinn', 'PINN ensemble (3 seeds)'), ('piecewise_beta', 'Piecewise-beta LS'),
+    for name, lab in [('pinn', f"PINN ensemble ({res['n_seeds']} seeds)"), ('piecewise_beta', 'Piecewise-beta LS'),
                       ('constant_beta', 'Constant-beta LS')]:
         row = {'Method': lab}
         for tgt in ['cases', 'deaths']:
@@ -482,19 +482,30 @@ def load_e5_reports():
     return raw[keep].reset_index(drop=True)
 
 
-def m5_baselines(train_end=E5_TRAIN_END):
-    """Module 5's constant-beta and piecewise-beta baselines, unchanged."""
+def m5_baselines(train_end=E5_TRAIN_END, fit_to='reports'):
+    """
+    Module 5's constant-beta and piecewise-beta baselines (same models, starting
+    values, residual scaling and solver as Module 5).
+    fit_to='reports': fitted to the real WHO report dates up to train_end (main E5 result).
+    fit_to='daily':   fitted to Module 5's interpolated daily series, as Module 5 did.
+    """
     daily = pd.read_csv(os.path.join(ROOT, 'data', 'outbreak_data.csv'))
     N = float(N_SL)
-    tr = daily[daily['day'] <= train_end]
-    t_tr = tr['day'].values.astype(float)
     t_all = daily['day'].values.astype(float)
-    c_tr, d_tr = tr['cumulative_cases'].values.astype(float), tr['cumulative_deaths'].values.astype(float)
+    if fit_to == 'reports':
+        tr = load_e5_reports()
+        tr = tr[tr['day'] <= train_end]
+        t_tr = tr['day'].values.astype(float)
+        c_tr, d_tr = tr['Cases_SierraLeone'].values.astype(float), tr['Deaths_SierraLeone'].values.astype(float)
+    else:
+        tr = daily[daily['day'] <= train_end]
+        t_tr = tr['day'].values.astype(float)
+        c_tr, d_tr = tr['cumulative_cases'].values.astype(float), tr['cumulative_deaths'].values.astype(float)
     i0, e0, d0 = max(11.0 / N, 1e-6), max(16.0 / N, 1e-6), 5.0 / N
     y0 = [1.0 - (e0 + i0 + d0), e0, i0, 0.0, d0]
 
     def solve(beta, t_eval):
-        # Module 5's solver call, unchanged: 5 fractions, DOP853, rtol 1e-10, atol 1e-12
+        # Module 5's solver: 5 fractions, DOP853, rtol 1e-10, atol 1e-12, starting at day 0
         f = beta if callable(beta) else (lambda t: beta)
 
         def rhs(t, y):
@@ -503,8 +514,9 @@ def m5_baselines(train_end=E5_TRAIN_END):
             return [-b * s * i, b * s * i - sp.SIGMA * e, sp.SIGMA * e - (sp.GAMMA + sp.MU) * i,
                     sp.GAMMA * i, sp.MU * i]
 
-        sol = solve_ivp(rhs, (t_eval[0], t_eval[-1]), y0, t_eval=t_eval, method='DOP853', rtol=1e-10, atol=1e-12)
-        y = sol.y.T
+        grid = np.union1d([0.0], t_eval)
+        sol = solve_ivp(rhs, (grid[0], grid[-1]), y0, t_eval=grid, method='DOP853', rtol=1e-10, atol=1e-12)
+        y = sol.y.T[np.searchsorted(grid, t_eval)]
         return (1.0 - y[:, 0] - y[:, 1]) * N, y[:, 4] * N
 
     def pw(p):
@@ -538,58 +550,66 @@ def _e5_metrics(y, yh):
 def run_e5(force=False, train_end=E5_TRAIN_END, n_seeds=5, overrides=None, beta_window=REAL_BETA_WINDOW,
            tag='m4_e5_heldout.json'):
     """
-    PINN trained on the real report dates up to `train_end`, forecasting the next
-    30 days; scored on Module 5's daily test series exactly as Module 5 scores its
-    baselines, and also on the real report dates in the test window.
+    PINN trained on the real report dates up to `train_end`, forecasting the next 30 days.
+    Main result ('table'): every method fitted to the real report dates and scored on the
+    real report dates in the test window. 'table_interpolated' keeps Module 5's original
+    protocol (baselines fitted to, and all methods scored on, the interpolated daily series).
+    A saved PINN run is reused unless force=True; the tables are always recomputed.
     """
-    res = None if force else _load_json(tag)
-    if res is not None:
-        return res
+    cached = None if force else _load_json(tag)
     rep = load_e5_reports()
     daily = pd.read_csv(os.path.join(ROOT, 'data', 'outbreak_data.csv'))
     tr = rep[rep['day'] <= train_end]
     t_tr = tr['day'].values.astype(float)
     test = daily[(daily['day'] > train_end) & (daily['day'] <= train_end + 30)]
     t_fut = test['day'].values.astype(float)
-    jobs = [(t_tr, tr['Cases_SierraLeone'].values.astype(float), tr['Deaths_SierraLeone'].values.astype(float),
-             0.0, float(train_end), t_fut, s, overrides or {}, beta_window) for s in SEEDS[:n_seeds]]
-    runs = _pool_map(_job_real_pinn, jobs)
-    ens_c = np.median([r['C'] for r in runs], axis=0)
-    ens_d = np.median([r['D'] for r in runs], axis=0)
-    base = m5_baselines(train_end)
-    mask = (base['t'] > train_end) & (base['t'] <= train_end + 30)
-    y_c, y_d = test['cumulative_cases'].values.astype(float), test['cumulative_deaths'].values.astype(float)
-    table = {
-        ('Constant-beta LS (Module 5)', 'Cases'): _e5_metrics(y_c, base['constant_beta']['C'][mask]),
-        ('Constant-beta LS (Module 5)', 'Deaths'): _e5_metrics(y_d, base['constant_beta']['D'][mask]),
-        ('Piecewise-beta LS (Module 5)', 'Cases'): _e5_metrics(y_c, base['piecewise_beta']['C'][mask]),
-        ('Piecewise-beta LS (Module 5)', 'Deaths'): _e5_metrics(y_d, base['piecewise_beta']['D'][mask]),
-        ('PINN ensemble (Module 4)', 'Cases'): _e5_metrics(y_c, ens_c),
-        ('PINN ensemble (Module 4)', 'Deaths'): _e5_metrics(y_d, ens_d),
-    }
-    for k, r in enumerate(runs):
-        table[(f'PINN seed {r["seed"]}', 'Cases')] = _e5_metrics(y_c, r['C'])
-        table[(f'PINN seed {r["seed"]}', 'Deaths')] = _e5_metrics(y_d, r['D'])
-    # scores on the real report dates inside the test window
+    if cached is not None:
+        runs = cached['pinn_runs']
+    else:
+        jobs = [(t_tr, tr['Cases_SierraLeone'].values.astype(float), tr['Deaths_SierraLeone'].values.astype(float),
+                 0.0, float(train_end), t_fut, s, overrides or {}, beta_window) for s in SEEDS[:n_seeds]]
+        runs = _pool_map(_job_real_pinn, jobs)
+    ens_c = np.median([np.asarray(r['C']) for r in runs], axis=0)
+    ens_d = np.median([np.asarray(r['D']) for r in runs], axis=0)
+
     rep_te = rep[(rep['day'] > train_end) & (rep['day'] <= train_end + 30)]
     idx = np.searchsorted(t_fut, rep_te['day'].values.astype(float))
-    report_scores = {
-        'PINN ensemble (Module 4)': _e5_metrics(rep_te['Cases_SierraLeone'].values.astype(float), ens_c[idx]),
-        'Piecewise-beta LS (Module 5)': _e5_metrics(rep_te['Cases_SierraLeone'].values.astype(float),
-                                                    base['piecewise_beta']['C'][mask][idx]),
-        'Constant-beta LS (Module 5)': _e5_metrics(rep_te['Cases_SierraLeone'].values.astype(float),
-                                                   base['constant_beta']['C'][mask][idx]),
-    }
-    res = {'train_end': train_end, 'table': [{'Model': m, 'Target': t, **v} for (m, t), v in table.items()],
-           'report_date_scores_cases': report_scores, 'pinn_runs': runs, 't_test': t_fut,
-           'ens_C': ens_c, 'ens_D': ens_d, 'baselines': {k: base[k] for k in ['t', 'constant_beta', 'piecewise_beta']},
+    obs = {'Cases': rep_te['Cases_SierraLeone'].values.astype(float), 'Deaths': rep_te['Deaths_SierraLeone'].values.astype(float)}
+    base = m5_baselines(train_end, fit_to='reports')
+    mask = (base['t'] > train_end) & (base['t'] <= train_end + 30)
+    preds = {'Constant-beta LS (Module 5)': base['constant_beta'], 'Piecewise-beta LS (Module 5)': base['piecewise_beta']}
+    table = {}
+    for name, b in preds.items():
+        for tgt, key in [('Cases', 'C'), ('Deaths', 'D')]:
+            table[(name, tgt)] = _e5_metrics(obs[tgt], np.asarray(b[key])[mask][idx])
+    for tgt, ens in [('Cases', ens_c), ('Deaths', ens_d)]:
+        table[('PINN ensemble (Module 4)', tgt)] = _e5_metrics(obs[tgt], ens[idx])
+    for r in runs:
+        for tgt, key in [('Cases', 'C'), ('Deaths', 'D')]:
+            table[(f'PINN seed {r["seed"]}', tgt)] = _e5_metrics(obs[tgt], np.asarray(r[key])[idx])
+
+    base_d = m5_baselines(train_end, fit_to='daily')
+    y_daily = {'Cases': test['cumulative_cases'].values.astype(float), 'Deaths': test['cumulative_deaths'].values.astype(float)}
+    table_interp = {}
+    for name, b in [('Constant-beta LS (Module 5)', base_d['constant_beta']), ('Piecewise-beta LS (Module 5)', base_d['piecewise_beta'])]:
+        for tgt, key in [('Cases', 'C'), ('Deaths', 'D')]:
+            table_interp[(name, tgt)] = _e5_metrics(y_daily[tgt], np.asarray(b[key])[mask])
+    for tgt, ens in [('Cases', ens_c), ('Deaths', ens_d)]:
+        table_interp[('PINN ensemble (Module 4)', tgt)] = _e5_metrics(y_daily[tgt], ens)
+
+    res = {'train_end': train_end, 'protocol': 'fitted to and scored on real report dates',
+           'n_test_reports': int(len(rep_te)), 'n_train_reports': int(len(tr)),
+           'table': [{'Model': m, 'Target': t, **v} for (m, t), v in table.items()],
+           'table_interpolated': [{'Model': m, 'Target': t, **v} for (m, t), v in table_interp.items()],
+           'pinn_runs': runs, 't_test': t_fut, 'ens_C': ens_c, 'ens_D': ens_d,
+           'baselines': {k: base[k] for k in ['t', 'constant_beta', 'piecewise_beta']},
+           'baselines_interpolated_fit': {k: base_d[k] for k in ['constant_beta', 'piecewise_beta']},
            'train_reports': {'day': t_tr, 'C': tr['Cases_SierraLeone'].values, 'D': tr['Deaths_SierraLeone'].values},
            'test_reports': {'day': rep_te['day'].values, 'C': rep_te['Cases_SierraLeone'].values,
                             'D': rep_te['Deaths_SierraLeone'].values},
            'config': asdict(CFG_REAL), 'overrides': overrides or {}, 'beta_window': beta_window}
     _save_json(tag, res)
     return res
-
 
 if __name__ == '__main__':
     what = sys.argv[1] if len(sys.argv) > 1 else 'all'
