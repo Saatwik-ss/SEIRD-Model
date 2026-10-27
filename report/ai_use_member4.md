@@ -10,7 +10,7 @@ The Module 4 work (the PINN and Experiments E2, E3, E4, E6 and E7, plus the PINN
 
 | Part | What Claude did | How it was checked |
 |---|---|---|
-| Diagnosis of the old PINN | Re-ran the old code, found typed-in metrics, an E5 forecast that scored a different quantity from the one it was trained on, a one-day offset, and the failure of E2 and E3. | Re-runs recorded in `PINN_RERUN_CHANGELOG.md` (kept as a record of the old code). |
+| Diagnosis of the old PINN | Re-ran the old code, found typed-in metrics, an E5 forecast that scored a different quantity from the one it was trained on, a one-day offset, and the failure of E2 and E3. | Re-runs recorded in `PINN_RERUN_CHANGELOG.md` (now removed; in git history). |
 | Data | Found and verified the WHO 2014-16 Sierra Leone data on HDX; wrote `data_pipeline_who.py`. Verified Module 5's cmrivers data against the upstream file and two WHO bulletins. | SHA-256 of the raw file recorded; spot checks against WHO Disease Outbreak News of 31 Jul and 22 Aug 2014. |
 | PINN design (`seird_pinn.py`) | Chose the observable form (C = I + R + D), exact conservation, hard initial conditions, relative residuals, the CFR bound, Fourier features, and Adam then L-BFGS. Found and fixed several of its own mistakes along the way (see `M4_PINN_CHANGELOG.md`). | Forward error against DOP853 (E2); ablation of each design choice (E6). |
 | Experiments (`pinn_experiments.py`, `pinn_figures.py`) | Wrote and ran E2-E7; chose settings on a tuning seed (synthetic) and on validation windows (real data) before running the test cases. | All numbers come from `results/m4_*.json`, written by the code; none were typed in. |

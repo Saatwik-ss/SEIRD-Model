@@ -1,7 +1,7 @@
 # Module 4 (PINN) rebuild: change log, 26 October 2026
 
 Module 4's contribution (tracker tasks T27-T35: PINN design, E2-E4, the loss-weight ablation, PINN limitations) was rebuilt from scratch so the PINN actually works. Modules 1-3 were not changed. Module 5's baselines were copied unchanged; only the PINN rows of E5 and the E5 interpretation changed (tracker T39: "Run M4's PINN on real data").
-The earlier audit and re-run of the old code is recorded in `PINN_RERUN_CHANGELOG.md`.
+The earlier audit and re-run of the old code was recorded in `PINN_RERUN_CHANGELOG.md` (removed in the clean-up; still in git history).
 
 ## 1. Results
 
@@ -24,7 +24,9 @@ Summary: the PINN is accurate on synthetic problems. On real data it forecasts *
 
 ## 1b. Final report from the Colab run (27 Oct 2026)
 
-`report/main.tex` now quotes the outputs of `Final MM notebook.ipynb` as run in Google Colab, not the local run (the table above is the local run). The E2-E5 and E7 figures in the report are the Colab output images, saved in `figs/colab/`. The E6 figure was dropped. No code was changed, and nothing was run locally for this.
+`report/main.tex` now quotes the outputs of `Final MM notebook.ipynb` as run in Google Colab, not the local run (the table above is the local run). Every figure in the report is the Colab output image, saved in `report/figures/`. The E6 figure was dropped.
+
+**Clean-up (27 Oct 2026).** Removed `scratch/` (one-off helper scripts), `figs/` (generated figures; the notebooks and `pinn_figures.py` recreate it when run), `update_project_tracker.py` (one-off), `PINN_RERUN_CHANGELOG.md` and the old compiled report PDF. All remain in git history. `notebook.ipynb` is kept as the earlier version for reference; `Final MM notebook.ipynb` is the final one. No code was changed, and nothing was run locally for this.
 
 | Colab output | Value |
 |---|---|

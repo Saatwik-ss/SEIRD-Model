@@ -182,14 +182,14 @@ To mathematically establish why published formulations fail, we consider two str
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{../figs/fig_m1_published_models_comparison.eps}
+\includegraphics[width=0.92\textwidth]{figures/fig_m1_published_models_comparison.png}
 \caption{Comprehensive 4-panel simulation comparison across published Ebola models (Static $\beta$, Althaus exponential decay, Rivers step policy) versus our dynamic adaptive framework over a 120-day horizon. Panel A: Transmission rates $\beta(t)$; Panel B: Effective reproduction numbers $R_t(t)$ relative to critical threshold $R_t = 1.0$; Panel C: Symptomatic active infectious fractions $i(t)$; Panel D: Cumulative disease-induced mortalities $d(t)$.}
 \label{fig:published_comparison}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\textwidth]{../figs/fig_m1_published_r0_forest.eps}
+\includegraphics[width=0.88\textwidth]{figures/fig_m1_published_r0_forest.png}
 \caption{Cross-study forest plot of published basic reproduction numbers $R_0$ with 95\% confidence intervals across landmark Ebola literature (Chowell et al., WHO Ebola Response Team, Rivers et al., Althaus, Legrand et al.) alongside our SEIRD baseline ($R_0 = 2.00$). The secondary top axis depicts the implied critical contact reduction / herd immunity threshold $p_c = 1 - 1/R_0$ (\%).}
 \label{fig:published_r0_forest}
 \end{figure}
@@ -239,7 +239,7 @@ While total active infections $(e+i)$ peaks at $15.85\%$ at $s^* = 0.500$, the s
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\textwidth]{../figs/fig_m1_phase_space_nullclines.eps}
+\includegraphics[width=0.88\textwidth]{figures/fig_m1_phase_space_nullclines.png}
 \caption{Phase-space trajectories $(e+i \text{ vs } s)$, analytical nullclines $s^* = 1/R_0$, and exact theoretical maximum active peaks $(e+i)_{\max}$ compared against DOP853 numerical ODE simulations across $R_0 \in [1.2, 3.5]$. Numerical simulation matches the closed-form theory to a relative error of at most $1.4 \times 10^{-5}$.}
 \label{fig:phase_nullclines}
 \end{figure}
@@ -259,7 +259,7 @@ Any combination of clinical isolation and safe burials that reduces community co
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\textwidth]{../figs/fig_m1_thresholds_contour.eps}
+\includegraphics[width=0.88\textwidth]{figures/fig_m1_thresholds_contour.png}
 \caption{Panel A: Herd immunity / critical intervention threshold $p_c = \delta_c = 1 - 1/R_0$. Panel B: 2D parameter space contour map $R_0(\beta, \gamma+\mu)$ showing the critical epidemic boundary $R_0 = 1$ and parameter coordinates from published Ebola literature.}
 \label{fig:thresholds_contour}
 \end{figure}
@@ -353,7 +353,7 @@ which links $R_0$ to the doubling time $\ln 2/\lambda_+$ seen in early case coun
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.68\textwidth]{../figs/fig_m2_growth_rate.eps}
+\includegraphics[width=0.68\textwidth]{figures/fig_m2_growth_rate.png}
 \caption{Early growth of $e+i$ from a tiny seed (log scale). The dashed line has slope $\lambda_+$, the positive eigenvalue of the infected block. The shaded band is the fitting window.}
 \label{fig:growth}
 \end{figure}
@@ -398,7 +398,7 @@ $R_0$ & $s_\infty$ (formula) & Rel.\ error $s_\infty$ & $d_\infty$ (formula) & R
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{../figs/fig_final_size.eps}
+\includegraphics[width=\textwidth]{figures/fig_final_size.png}
 \caption{(a) Fraction ever infected, $1 - s_\infty$: final-size formula (line) and ODE solutions (dots). (b) Relative error in $s_\infty$ when the ODE runs until the epidemic is over (red) and when it is stopped at day 250 (grey).}
 \label{fig:final_size}
 \end{figure}
@@ -441,7 +441,7 @@ $\mu$    & $-0.846$ & $+0.550$ & $-0.867$ & $+0.754$ \\
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{../figs/fig_sensitivity_prcc.eps}
+\includegraphics[width=0.85\textwidth]{figures/fig_sensitivity_prcc.png}
 \caption{PRCC of each parameter for four epidemic outputs (Latin hypercube sampling, $n = 1000$).}
 \label{fig:sensitivity_prcc}
 \end{figure}
@@ -472,7 +472,7 @@ Step sizes $h \in \{1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125\}$ days were tested o
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.68\textwidth]{../figs/fig_e1_convergence.eps}
+\includegraphics[width=0.68\textwidth]{figures/fig_e1_convergence.png}
 \caption{Log-log convergence analysis of Forward Euler and RK4 solvers against the DOP853 benchmark, confirming empirical slopes of $1.001$ and $3.736$.}
 \label{fig:e1_convergence}
 \end{figure}
@@ -537,7 +537,7 @@ With $\beta = 0.4858$ ($R_0 = 2$), $\mu = 0.1$ and $(s,e,i,r,d)(0) = (0.99, 0.00
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{../figs/colab/fig_e2_forward_pinn.png}
+\includegraphics[width=0.95\textwidth]{figures/fig_e2_forward_pinn.png}
 \caption{Experiment E2: forward PINN (markers) against DOP853 (lines), and the pointwise error.}
 \label{fig:e2_forward_pinn}
 \end{figure}
@@ -567,14 +567,14 @@ The transmission rate is recovered to about 11--12\% (Figure~\ref{fig:e3_inverse
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.62\textwidth]{../figs/colab/fig_e3_inverse_beta.png}
+\includegraphics[width=0.62\textwidth]{figures/fig_e3_inverse_beta.png}
 \caption{Experiment E3: $\beta(t)$ recovered from noisy cumulative cases and deaths (mean of 5 seeds; band: range over seeds at 5\% noise).}
 \label{fig:e3_inverse_beta}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{../figs/colab/fig_e4_hidden_states.png}
+\includegraphics[width=\textwidth]{figures/fig_e4_hidden_states.png}
 \caption{Experiment E4: hidden $s(t)$, $e(t)$, $i(t)$ recovered from the same runs.}
 \label{fig:e4_hidden_states}
 \end{figure}
@@ -622,7 +622,7 @@ PINN ensemble (5 seeds) & Deaths & 50.9 & 57.9 & 9.6\% \\
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{../figs/colab/fig_e5_real_forecast.png}
+\includegraphics[width=\textwidth]{figures/fig_e5_real_forecast.png}
 \caption{Experiment E5 on the 2014 Sierra Leone data, fitted to the real reports in days 0--89 and tested on days 90--119. Right: the PINN's $R_t$ over the training window.}
 \label{fig:e5_real_forecast}
 \end{figure}
@@ -657,7 +657,7 @@ On cases the PINN's mean absolute error is 20\% lower than constant-$\beta$'s (9
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{../figs/colab/fig_e7_rolling_forecasts.png}
+\includegraphics[width=\textwidth]{figures/fig_e7_rolling_forecasts.png}
 \caption{Experiment E7: 4-week forecasts from 8 origins on the WHO 2014--15 Sierra Leone data (top), the PINN's $R_t$ in each training window (bottom left), and the mean errors (bottom right).}
 \label{fig:e7}
 \end{figure}
