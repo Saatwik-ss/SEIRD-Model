@@ -39,6 +39,10 @@ Summary: the PINN is accurate on synthetic problems. On real data it forecasts *
 
 **Open values (left blank in the report).** The piecewise-β baseline gives different results in Colab and locally: in E5, cases 17.4% vs 10.1% and deaths 6.9% vs 1.9%; in E7, cases MAE 112.9 vs 108.1. In Colab it does not reproduce Module 5's published MAE of 136.94 either (270.08). The probable cause is the single-start `least_squares` fit on a β that jumps between segments. Every piecewise-β number, and every comparison with it, is left blank (`\blank`) until the fit is made reliable. The E2 rerun with absolute residuals (E6) is also blank: its output table did not display in the Colab run.
 
+**Fix (in `Final MM notebook.ipynb` only; `pinn_experiments.py` is unchanged).** Both piecewise-β fits, Module 5's in E5 and the 2-segment one in E7, now integrate the ODE one segment at a time, restarting at each breakpoint. Each starts from several points (9 in each fit) and keeps the lowest cost. The constant-β fits are unchanged. The E6 cell now prints the forward-problem table instead of displaying it. Not yet run: the blanks are filled from the next Colab run of the notebook.
+
+**Also removed:** the R0 forest plot (report figure and the notebook cell that drew it).
+
 **Removed from the report:** the E5 "interpolated protocol" comparison, the E6 "absolute residuals" row of the inverse ablation (no effect, 0.047 vs 0.042), and the E6 figure, which still plots that row.
 
 **Who presents what:** E6 and E7 moved from Module 4 to Module 5 (text only: report author block, objectives and AI acknowledgement, and the notebook headings and overview table). Module 4 keeps the PINN design and E2-E4.
