@@ -4,6 +4,7 @@
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{cite}
 \usepackage{hyperref}
 \usepackage{tikz}
@@ -11,6 +12,9 @@
 \usepackage{subcaption}
 \usepackage{color}
 \usepackage{microtype}
+
+% Let TeX stretch spaces a little more rather than run past the margin
+\setlength{\emergencystretch}{3em}
 
 % Blank for a value still to be filled in (see M4_PINN_CHANGELOG.md, "Open values")
 \newcommand{\blank}{\underline{\hspace{1.2cm}}}
@@ -25,14 +29,14 @@
 \title{\textbf{Physics-Informed Neural Networks for Parameter Estimation and Hidden-State Recovery in an SEIRD Epidemic Model with Time-Varying Transmission:\\
 \large A Rigorous Investigation of the 2014 West African Ebola Outbreak (Sierra Leone)}}
 
-\author{
+\author{\parbox{0.95\textwidth}{\centering
     \textbf{Group Project: Mathematical Modelling} \\
     \textbf{Module 1}: Biological Motivation, Formulation, Published Models Synthesis \& Phase-Space Analysis \\
     \textbf{Module 2}: Mathematical Analysis ($R_0$, Next-Generation Matrix, DFE Stability, Final Size, Sensitivity) \\
     \textbf{Module 3}: Vectorized Numerical Solvers \& Order of Convergence Verification \\
     \textbf{Module 4}: PINN Architecture, Physics Loss \& Synthetic Validation (E2--E4) \\
     \textbf{Module 5}: Real-World Application, Baselines, Rolling Forecasts, Ablation \& Limitations (E5--E7)
-}
+}}
 
 \date{October 2026}
 
@@ -150,14 +154,15 @@ In accordance with Course Instruction 2 (requiring original analysis upon publis
 \centering
 \caption{Systematic comparative synthesis of published mathematical models for Ebola Virus Disease.}
 \label{tab:published_models}
-\small
-\begin{tabular}{lccccc}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{3.2cm}}
 \toprule
 Model Architecture & Key States & Transmission Formulation & Estimated $R_0$ & Free Params & Identified Structural Limitation \\
 \midrule
 Chowell et al. \cite{chowell2004basic} & 4 ($S,E,I,R$) & Two-phase discrete step & 1.83 (Congo) & 4 & Abrupt policy jump; no gradual adoption \\
-Legrand et al. \cite{legrand2007understanding} & 9 ($S,E,I,H,F,\dots$) & Tripartite ($\beta_I, \beta_H, \beta_F$) & 2.70 (DRC) & 14+ & Severe parameter non-identifiability \\
-Rivers et al. \cite{rivers2014modeling} & 7 ($S,E,I,H,F,R,D$) & ETU beds \& safe burials & 2.53 (SL) & 8 & Heuristic step policy; unverified contact matrices \\
+Legrand et al. \cite{legrand2007understanding} & 9 ($S,E,I,$ $H,F,\dots$) & Tripartite ($\beta_I, \beta_H, \beta_F$) & 2.70 (DRC) & 14+ & Severe parameter non-identifiability \\
+Rivers et al. \cite{rivers2014modeling} & 7 ($S,E,I,H,$ $F,R,D$) & ETU beds \& safe burials & 2.53 (SL) & 8 & Heuristic step policy; unverified contact matrices \\
 Althaus \cite{althaus2014estimating} & 4 ($S,E,I,R$) & $\beta(t) = \beta_0 e^{-k(t-t_0)}$ & 2.53 (SL) & 4 & Rigid exponential decay; zero-resurgence prior \\
 \midrule
 \textbf{Our SEIRD-PINN} & \textbf{5 ($S,E,I,R,D$)} & \textbf{Non-parametric $\text{NN}_\phi(\tau)$} & \textbf{Dynamic $R_t$} & \textbf{Identifiable} & \textbf{Data-driven discovery without parametric bias} \\
@@ -233,7 +238,7 @@ The epidemic reaches its maximum active infection burden $(e+i)_{\max}$ precisel
 \end{equation}
 For our baseline Ebola parameters ($R_0 = 2.00, s_0 = 0.990, e_0 = 0.005, i_0 = 0.005$ with $w_0 = 0.010$):
 \begin{equation}
-    s^* = \frac{1}{2.00} = 0.500, \quad (e+i)_{\max} = 0.010 + 0.990 - 0.500 \left[1 + \ln(2.00 \times 0.990)\right] \approx 0.1585 \quad (15.85\%).
+    s^* = \frac{1}{2.00} = 0.500, \quad (e+i)_{\max} = 0.010 + 0.990 - 0.500 \left[1 + \ln(2.00 \times 0.990)\right] \approx 0.1585.
 \end{equation}
 While total active infections $(e+i)$ peaks at $15.85\%$ at $s^* = 0.500$, the symptomatic infectious compartment $i(t)$ alone reaches an attenuated peak ($\approx 4.8\%$) because the $9.4$-day incubation period buffers individuals in $e$ before they become infectious (Figure~\ref{fig:phase_nullclines}).
 
@@ -269,7 +274,7 @@ Any combination of clinical isolation and safe burials that reduces community co
 
 Before fitting anything to data, we ask what the model itself predicts. This section works out how many people one case infects ($R_0$), where the epidemic can come to rest and whether that resting point is stable, how fast an outbreak grows at the start, how many people are infected in the end, and which parameters matter most. Throughout this section $\beta$ is a constant. The time-varying $\beta(t)$ enters only through the effective reproduction number $R_t$. Every formula is checked against an accurate numerical solution (DOP853, \texttt{rtol} $=10^{-12}$, \texttt{atol} $=10^{-14}$), so the theory and the code test each other.
 
-\subsection{Basic Reproduction Number $R_0$ via the Next-Generation Matrix}
+\subsection{Basic Reproduction Number \texorpdfstring{$R_0$}{R0} via the Next-Generation Matrix}
 Only $e$ and $i$ carry the infection. Following Diekmann et al.~\cite{diekmann2010construction}, we split their equations into new infections $\mathcal{F}$ and all other movement $\mathcal{V}$:
 \begin{equation}
     \frac{d}{dt}\begin{pmatrix} e \\ i \end{pmatrix} =
@@ -458,7 +463,7 @@ For control, the levers that reduce the size of the epidemic are lower transmiss
 Surveillance reports cumulative cases and deaths, while $s$ and $e$ are never measured. Different parameter sets can produce almost the same two curves. For example, a longer incubation period combined with faster spread can look like a shorter incubation period with slower spread. The analysis above shows how the parameters differ in what they do. $\sigma$ moves the timing of the epidemic but not $R_0$ or the final size, and $\gamma$ and $\mu$ enter $R_0$ only through their sum $\gamma + \mu$. Estimating all of them at once from two noisy curves would therefore be unreliable. We therefore fix $\sigma$ and $\gamma$ from clinical studies~\cite{who2014ebola}, so the main unknown left is $\beta(t)$. If $\mu$ is also estimated, cases and deaths together can pin it down, because the share of cases that die is the case-fatality ratio $\mu/(\gamma+\mu)$. Even so, $\beta(t)$ can change shape in many ways that fit the data almost equally well, which is why the PINN adds a smoothness penalty on $\beta(t)$.
 
 \section{Numerical Solvers and Convergence Verification}
-Custom vectorized implementations of Forward Euler and classical Runge-Kutta 4 (RK4) were developed from scratch and validated against an adaptive DOP853 benchmark ($rtol=10^{-12}, atol=10^{-14}$) \cite{hairer1993solving}.
+Custom vectorized implementations of Forward Euler and classical Runge-Kutta 4 (RK4) were developed from scratch and validated against an adaptive DOP853 benchmark (\texttt{rtol} $=10^{-12}$, \texttt{atol} $=10^{-14}$) \cite{hairer1993solving}.
 
 \subsection{Conservation Invariant Preservation}
 The physical conservation invariant $\sum_{k=1}^5 y_k(t) = 1$ was evaluated along the trajectory:
@@ -642,9 +647,10 @@ A single 30-day window gives one comparison. To test the PINN across the epidemi
 \centering
 \caption{Experiment E7: mean error over 8 rolling 4-week forecasts (16 Jan -- 31 Jul 2015), WHO laboratory-confirmed data.}
 \label{tab:e7}
+\small
 \begin{tabular}{lcccc}
 \toprule
-Method & Cases MAE & Cases RMSE & Error in 4-week new cases & Deaths MAE \\
+Method & Cases MAE & Cases RMSE & 4-week new-case error & Deaths MAE \\
 \midrule
 PINN ensemble (3 seeds) & 96.8 & 102.7 & 148.2 & 69.7 \\
 Piecewise-$\beta$ LS & \blank & \blank & \blank & \blank \\
