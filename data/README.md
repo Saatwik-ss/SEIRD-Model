@@ -1,6 +1,6 @@
 # Outbreak Surveillance Dataset: 2014-16 Ebola Epidemic, Sierra Leone
 
-All real-data experiments (E5 and E7) use one dataset: the WHO Ebola situation reports for Sierra Leone, as published on the Humanitarian Data Exchange (HDX). Only real report dates are used; **nothing is interpolated**. The notebook (`Final MM notebook.ipynb`, "Code 2") downloads the file, checks its SHA-256 and builds the processed series.
+All real-data experiments (E5 and E7) use one dataset: the WHO Ebola situation reports for Sierra Leone, as published on the Humanitarian Data Exchange (HDX). Only real report dates are used; **nothing is interpolated**. The notebook (`Final_MM_notebook.ipynb`, "Code 2") downloads the file, checks its SHA-256 and builds the processed series.
 
 | Item | Value |
 |---|---|

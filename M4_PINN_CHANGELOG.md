@@ -24,9 +24,9 @@ Summary: the PINN is accurate on synthetic problems. On real data it forecasts *
 
 ## 1b. Final report from the Colab run (27 Oct 2026)
 
-`report/main.tex` now quotes the outputs of `Final MM notebook.ipynb` as run in Google Colab, not the local run (the table above is the local run). Every figure in the report is the Colab output image, saved in `report/figures/`. The E6 figure was dropped.
+`report/main.tex` now quotes the outputs of `Final_MM_notebook.ipynb` as run in Google Colab, not the local run (the table above is the local run). Every figure in the report is the Colab output image, saved in `report/figures/`. The E6 figure was dropped.
 
-**Clean-up (27 Oct 2026).** Removed `scratch/` (one-off helper scripts), `figs/` (generated figures; the notebooks and `pinn_figures.py` recreate it when run), `update_project_tracker.py` (one-off), `PINN_RERUN_CHANGELOG.md` and the old compiled report PDF. All remain in git history. `notebook.ipynb` is kept as the earlier version for reference; `Final MM notebook.ipynb` is the final one. No code was changed, and nothing was run locally for this.
+**Clean-up (27 Oct 2026).** Removed `scratch/` (one-off helper scripts), `figs/` (generated figures; the notebooks and `pinn_figures.py` recreate it when run), `update_project_tracker.py` (one-off), `PINN_RERUN_CHANGELOG.md` and the old compiled report PDF. All remain in git history. `notebook.ipynb` is kept as the earlier version for reference; `Final_MM_notebook.ipynb` is the final one. No code was changed, and nothing was run locally for this.
 
 | Colab output | Value |
 |---|---|
@@ -39,19 +39,27 @@ Summary: the PINN is accurate on synthetic problems. On real data it forecasts *
 
 **Open values (left blank in the report).** The piecewise-β baseline gives different results in Colab and locally: in E5, cases 17.4% vs 10.1% and deaths 6.9% vs 1.9%; in E7, cases MAE 112.9 vs 108.1. In Colab it does not reproduce Module 5's published MAE of 136.94 either (270.08). The probable cause is the single-start `least_squares` fit on a β that jumps between segments. Every piecewise-β number, and every comparison with it, is left blank (`\blank`) until the fit is made reliable. The E2 rerun with absolute residuals (E6) is also blank: its output table did not display in the Colab run.
 
-**Fix (in `Final MM notebook.ipynb` only; `pinn_experiments.py` is unchanged).** Both piecewise-β fits, Module 5's in E5 and the 2-segment one in E7, now integrate the ODE one segment at a time, restarting at each breakpoint. Each starts from several points (9 in each fit) and keeps the lowest cost. The constant-β fits are unchanged. The E6 cell now prints the forward-problem table instead of displaying it. Not yet run: the blanks are filled from the next Colab run of the notebook.
+**Fix (in `Final_MM_notebook.ipynb` only; `pinn_experiments.py` is unchanged).** Both piecewise-β fits, Module 5's in E5 and the 2-segment one in E7, now integrate the ODE one segment at a time, restarting at each breakpoint. Each starts from several points (9 in each fit) and keeps the lowest cost. The constant-β fits are unchanged. The E6 cell now prints the forward-problem table instead of displaying it. The blanks were filled from the next Colab run (Section 1d).
 
 ## 1c. E5 moved to the WHO data; the cmrivers dataset removed (27 Oct 2026)
 
 E5 no longer uses Module 5's cmrivers series (25 May - 21 Sep 2014, linear interpolation between reports). It now uses the same WHO HDX series as E7: 29 Aug 2014 - 25 Apr 2015 (days 0-239). Training covers days 0-179 (the first 75%) and the test covers days 180-239. The PINN ensemble (5 seeds) is compared with constant-β and 3-segment piecewise-β least squares, which are E7's baselines and also estimate μ and the initial conditions. The test window starts after the last validation forecast used to choose the PINN settings (16 Jan 2015).
 
-Removed: `data/outbreak_data.csv`, `data/country_timeseries_raw.csv`, `data_pipeline.py`, `results/m4_e5_heldout.json`, the old E5 figure and Figure J, and every mention of that dataset in the final notebook, the report, `data/README.md`, `CONVENTIONS.md` and `Project Plan.md`. The E5 rows in the tables above, and the Module 5 data bullet in Section 3, describe the old E5 and are kept only as history. `pinn_experiments.py` still has the old E5 code and now differs from the notebook, which is the version that runs. The old `notebook.ipynb` is kept unchanged for reference. In the report and notebook, all E5 numbers are blank until the Colab run.
+Removed: `data/outbreak_data.csv`, `data/country_timeseries_raw.csv`, `data_pipeline.py`, `results/m4_e5_heldout.json`, the old E5 figure and Figure J, and every mention of that dataset in the final notebook, the report, `data/README.md`, `CONVENTIONS.md` and `Project Plan.md`. The E5 rows in the tables above, and the Module 5 data bullet in Section 3, describe the old E5 and are kept only as history. `pinn_experiments.py` still has the old E5 code and now differs from the notebook, which is the version that runs. The old `notebook.ipynb` is kept unchanged for reference. The E5 numbers were filled from the Colab run (Section 1d).
 
 **Also removed:** the R0 forest plot (report figure and the notebook cell that drew it).
 
 **Removed from the report:** the E5 "interpolated protocol" comparison, the E6 "absolute residuals" row of the inverse ablation (no effect, 0.047 vs 0.042), and the E6 figure, which still plots that row.
 
 **Who presents what:** E6 and E7 moved from Module 4 to Module 5 (text only: report author block, objectives and AI acknowledgement, and the notebook headings and overview table). Module 4 keeps the PINN design and E2-E4.
+
+## 1d. Blanks filled from the Colab run (27 Oct 2026)
+
+`Final_MM_notebook.ipynb` was run in full in Google Colab (every cell executed). All blanks in the report and the notebook are filled with its outputs, quoted as printed; no code or result was changed. The E5 figure and the refreshed E7 figure are the images from this run (`report/figures/`). All other outputs match the previous Colab run (only training times differ).
+
+- **E5** (74 training reports, 32 test reports), relative error, cases / deaths: constant-β 28.558% / 10.694%, piecewise-β 0.818% / 12.884%, PINN ensemble 1.350% / 11.772%. PINN seeds, cases: 0.54-1.75%.
+- **E7** (8 origins), mean absolute error, cases / deaths: PINN 96.8 / 69.7, piecewise-β 106.5 / 42.0, constant-β 120.9 / 50.7. With the multi-start fix the piecewise-β case MAE is 106.5 (112.9 in the previous Colab run). The PINN has the lowest case error at 6 of the 8 origins.
+- **E6**, E2 forward problem with absolute residuals: relative L2 error 0.752-1.288 (3 seeds).
 
 ## 2. Files
 
